@@ -1,4 +1,5 @@
 from sklearn.base import BaseEstimator, OutlierMixin
+#from sklearn.preprocessing import OneHotEncoder
 import numpy as np
 import pandas as pd
 from copy import deepcopy
@@ -52,7 +53,7 @@ class BHAD(BaseEstimator, OutlierMixin):
 
     Reference:
     ------------
-    [1] Vosseler, A. (2022): Unsupervised insurance fraud prediction based on anomaly detector ensembles, Risk
+    [1] Vosseler, A. (2022): Unsupervised insurance fraud prediction based on anomaly detector ensembles, Risks, 10 (132)
     """
 
     def __init__(self, contamination = 0.01, alpha = 1/2, exclude_col = [], append_score = False, verbose : bool = True):
@@ -64,18 +65,6 @@ class BHAD(BaseEstimator, OutlierMixin):
         self.exclude_col = exclude_col               # list with column names in X of columns to exclude for computation of the score
         super(BHAD, self).__init__()
 
-        #--------------- Get numeric and categorical features from train yaml ----------------------------------------  
-        # features_train = list()
-        # for key in list(self.train_schema.keys()):
-        #    if self.train_schema.get(key) is not None: 
-        #        for i in self.train_schema.get(key): 
-        #           features_train.append(str(i))       
-        #    else:
-        #        nope = key ;print("There are no features in train.yml block:", nope,"!")
-
-        # self.numeric_features_ = list(filter(None, [list(feature.keys())[0] if feature[list(feature.keys())[0]]['include'] else None for feature in self.train_schema.get('numeric_cols')]))
-        # self.cat_features_ = list(filter(None, [list(feature.keys())[0] if feature[list(feature.keys())[0]]['include'] else None for feature in self.train_schema.get('categorical_cols')]))
-        #-----------------------------------------------------------------------------------------------------------------------  
 
     def __del__(self):
         class_name = self.__class__.__name__
@@ -106,7 +95,7 @@ class BHAD(BaseEstimator, OutlierMixin):
       self.enc = utils.onehot_encoder(prefix_sep='__')
       self.enc.fit(df)    # training phase
              
-      self.df_one = self.enc.transform(df)#.toarray()   # apply one-hot encoder to categorical -> sparse dummy matrix
+      self.df_one = self.enc.transform(df)   # apply one-hot encoder to categorical -> sparse dummy matrix
       assert all(np.sum(self.df_one, axis=1) == df.shape[1]), 'Row sums must be equal to number of features!!'
       self.columns_onehot_ = self.enc.get_feature_names()   # keep this for postprocessing/explainability later
       if self.verbose : print("Matrix dimension after one-hot encoding:", self.df_one.shape)  
@@ -162,7 +151,6 @@ class BHAD(BaseEstimator, OutlierMixin):
         if self.verbose : print("BHAD completed.")
 
         self.scores_ = self.scores          
-        self.train_schema_ = self.train_schema
         self.threshold_ = self.threshold
         self.freq_ = self.freq
         self.f_mat_ = self.f_mat

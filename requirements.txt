@@ -1,2 +1,5 @@
 pandas
 scikit_learn
+scipy
+matplotlib
+functools

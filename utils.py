@@ -26,7 +26,7 @@ def paste(*lists, sep=" ", collapse=None):
 
 
 def jitter(M: int, noise_scale: float = 10**5., seed : int = None):
-    
+
   """ Generates jitter that can be added to any float, e.g.
       helps when used with pd.qcut to produce unique class edges
       M: number of random draws, i.e. size
@@ -174,7 +174,6 @@ class discretize(BaseEstimator, TransformerMixin):
     def __del__(self):
         class_name = self.__class__.__name__
         #print(class_name, "destroyed")
-
 
     def fit(self, X, y=None):
         
