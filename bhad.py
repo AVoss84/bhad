@@ -8,7 +8,7 @@ import warnings, utils
 
 class BHAD(BaseEstimator, OutlierMixin):
     """
-    Bayesian Histogram-based Anomaly Detector (BHAD), see [1] for details. 
+    Bayesian Histogram-based Anomaly Detector (BHAD), see [1,2] for details. 
 
     Parameters
     ----------
@@ -54,9 +54,10 @@ class BHAD(BaseEstimator, OutlierMixin):
     Reference:
     ------------
     [1] Vosseler, A. (2022): Unsupervised insurance fraud prediction based on anomaly detector ensembles, Risks, 10 (132)
+    [2] Vosseler, A. (2021): BHAD: Fast unsupervised anomaly detection using Bayesian histograms, Technical Report
     """
 
-    def __init__(self, contamination = 0.01, alpha = 1/2, exclude_col = [], append_score = False, verbose : bool = True):
+    def __init__(self, contamination : float = 0.01, alpha : float = 1/2, exclude_col : list = [], append_score : bool = False, verbose : bool = True):
         
         self.contamination = contamination                   # outlier proportion in the dataset
         self.alpha = alpha                              # uniform Dirichlet prior concentration parameter used for each feature
@@ -70,14 +71,14 @@ class BHAD(BaseEstimator, OutlierMixin):
         class_name = self.__class__.__name__
 
 
-    def _fast_bhad(self, X : pd.DataFrame):
+    def _fast_bhad(self, X : pd.DataFrame)-> pd.DataFrame:
       """
-      -------
       Input:
-      -------
+
       X:            design matrix as pandas df with all features (must all be categorical, 
                     since one-hot enc. will be applied! Otherwise run discretize() first.)
       append_score: Should anomaly score be appended to X?
+      return: scores
       """  
       assert isinstance(X, pd.DataFrame)
       selected_col = X.columns[~X.columns.isin(self.exclude_col)] 
@@ -125,7 +126,7 @@ class BHAD(BaseEstimator, OutlierMixin):
       return out    
     
 
-    def fit(self, X, y=None):
+    def fit(self, X : pd.DataFrame, y=None):
         """
         Apply the BHAD and calculate the outlier threshold value.
 
@@ -162,7 +163,7 @@ class BHAD(BaseEstimator, OutlierMixin):
         return self
 
     
-    def score_samples(self, X):
+    def score_samples(self, X : pd.DataFrame)-> pd.DataFrame:
         """
         Outlier score calculated by summing the counts 
         of each feature level in the dataset.
@@ -199,7 +200,7 @@ class BHAD(BaseEstimator, OutlierMixin):
             return self.scores
     
     
-    def decision_function(self, X):
+    def decision_function(self, X : pd.DataFrame) -> np.array:
         """
         Outlier score centered around the threshold value. Outliers are scored 
         negatively (<= 0) and inliers are scored positively (> 0).
@@ -221,7 +222,7 @@ class BHAD(BaseEstimator, OutlierMixin):
         return score - self.threshold_
     
     
-    def predict(self, X):
+    def predict(self, X : pd.DataFrame) -> np.array:
         """
         Returns labels for X.
 

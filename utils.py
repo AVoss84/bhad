@@ -15,17 +15,17 @@ from mpl_toolkits.mplot3d import Axes3D
 
 # Mimics R's paste() function for two lists:
 #---------------------------------------------
-def reduce_concat(x, sep=""):
+def reduce_concat(x, sep : str = ""):
     return functools.reduce(lambda x, y: str(x) + sep + str(y), x)
 
-def paste(*lists, sep=" ", collapse=None):
+def paste(*lists, sep : str = " ", collapse : str = None) -> list:
     result = map(lambda x: reduce_concat(x, sep=sep), zip(*lists))
     if collapse is not None:
         return reduce_concat(result, sep=collapse)
     return list(result)
 
 
-def jitter(M: int, noise_scale: float = 10**5., seed : int = None):
+def jitter(M: int, noise_scale: float = 10**5., seed : int = None)-> np.array:
 
   """ Generates jitter that can be added to any float, e.g.
       helps when used with pd.qcut to produce unique class edges
@@ -38,7 +38,7 @@ def jitter(M: int, noise_scale: float = 10**5., seed : int = None):
 
 class onehot_encoder(TransformerMixin, BaseEstimator):
 
-    def __init__(self, exclude_columns=[], prefix_sep = '_', oos_token = 'OTHERS', verbose = True, **kwargs):
+    def __init__(self, exclude_columns : list = [], prefix_sep : str = '_', oos_token : str = 'OTHERS', verbose : bool = True, **kwargs):
         """
         One-hot encoder that handles out-of-sample levels of categorical variables
         Args:
@@ -52,7 +52,7 @@ class onehot_encoder(TransformerMixin, BaseEstimator):
         self.unique_categories_, self.value2name_ = dict(), dict()
         if self.verbose : print("One-hot encoding of discrete (or discretized) features")
 
-    def fit(self, X):
+    def fit(self, X : pd.DataFrame):
 
         self.selected_col = X.columns[~X.columns.isin(self.exclude_col)] 
         if len(self.exclude_col)>0:
@@ -77,7 +77,7 @@ class onehot_encoder(TransformerMixin, BaseEstimator):
         self.X_ = df
         return self    
 
-    def transform(self, X):
+    def transform(self, X : pd.DataFrame):
         
         check_is_fitted(self)        # Check if fit had been called
         self.selected_col = X.columns[~X.columns.isin(self.exclude_col)]
@@ -140,17 +140,17 @@ class discretize(BaseEstimator, TransformerMixin):
     ------
     columns: list of feature names
     nbins: number of bins to discretize numeric features into
-    lower: optinal lower value for the first bin, very often 0, e.g. amounts
+    lower: optional lower value for the first bin, very often 0, e.g. amounts
     k: number of standard deviations to be used for the intervals, see k*np.std(v)  
     round_intervals: number of digits to round the intervals
     eps: minimum value of variance of a numeric features (check for 'zero-variance features') 
     make_labels: assign integer labels to bins instead of technical intervals
     """
     
-    def __init__(self, columns = [], nbins : int = None, lower = None, k = 1, 
-                 round_intervals = 5, eps = .001, 
-                 make_labels = False, 
-                 verbose : bool = True, prior_gamma = 0.9, prior_max_M = 50,  # Bayesian AVF (estimate number of bins M)
+    def __init__(self, columns : list = [], nbins : int = None, lower : float = None, k : int = 1, 
+                 round_intervals : int = 5, eps : float = .001, 
+                 make_labels : bool = False, 
+                 verbose : bool = True, prior_gamma : float = 0.9, prior_max_M : int = 50,  # Bayesian AVF (estimate number of bins M)
                  **kwargs):
         
         self.columns = columns 
@@ -175,7 +175,7 @@ class discretize(BaseEstimator, TransformerMixin):
         class_name = self.__class__.__name__
         #print(class_name, "destroyed")
 
-    def fit(self, X, y=None):
+    def fit(self, X : pd.DataFrame, y=None):
         
             assert isinstance(X, pd.DataFrame), 'Input X must be pandas dataframe!'
             self.nbins = self.nof_bins    # initialize (might be changed in case of low variance features)
@@ -263,7 +263,7 @@ class discretize(BaseEstimator, TransformerMixin):
             return self
     
     
-    def transform(self, X, y=None):
+    def transform(self, X : pd.DataFrame, y=None):
         
         df_new = deepcopy(X)
         self.cat_columns = df_new.select_dtypes(include='object').columns.tolist()  # categorical (for later reference in postproc.)
