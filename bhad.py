@@ -141,7 +141,7 @@ class BHAD(BaseEstimator, OutlierMixin):
         -------
         self : BHAD object
         """
-        if self.verbose : print("\nConstruct Bayesian Histogram-based Anomaly Detector (BHAD).")
+        if self.verbose : print("\nConstruct Bayesian Histogram-based Anomaly Detector (BHAD)")
         self.scores = self._fast_bhad(X)
     
         if self.append_score:  

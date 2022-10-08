@@ -50,7 +50,7 @@ class onehot_encoder(TransformerMixin, BaseEstimator):
         self.prefix_sep_ = prefix_sep
         self.verbose = verbose
         self.unique_categories_, self.value2name_ = dict(), dict()
-        if self.verbose : print("One-hot encoding of categorical features")
+        if self.verbose : print("One-hot encoding of discrete (or discretized) features")
 
     def fit(self, X):
 
