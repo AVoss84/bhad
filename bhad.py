@@ -1,5 +1,5 @@
 from sklearn.base import BaseEstimator, OutlierMixin
-#from sklearn.preprocessing import OneHotEncoder
+from sklearn.preprocessing import OneHotEncoder
 import numpy as np
 import pandas as pd
 from copy import deepcopy
@@ -69,12 +69,11 @@ class BHAD(BaseEstimator, OutlierMixin):
 
     def __del__(self):
         class_name = self.__class__.__name__
-
-
+    
+    @utils.timer
     def _fast_bhad(self, X : pd.DataFrame)-> pd.DataFrame:
       """
       Input:
-
       X:            design matrix as pandas df with all features (must all be categorical, 
                     since one-hot enc. will be applied! Otherwise run discretize() first.)
       append_score: Should anomaly score be appended to X?
@@ -89,16 +88,15 @@ class BHAD(BaseEstimator, OutlierMixin):
       self.df_shape = df.shape  
       self.columns = df.select_dtypes(include='object').columns.tolist()  # use only categorical (including discretized numerical)
     
-      if len(self.columns)!= self.df_shape[1] :
-          warnings.warn('Not all features in X are categorical!!')
+      if len(self.columns)!= self.df_shape[1] : warnings.warn('Not all features in X are categorical!!')
       self.df = df
-      #self.enc = OneHotEncoder(handle_unknown='ignore', dtype = int)
-      self.enc = utils.onehot_encoder(prefix_sep='__')
-      self.enc.fit(df)    # training phase
-             
-      self.df_one = self.enc.transform(df)   # apply one-hot encoder to categorical -> sparse dummy matrix
+      unique_categories_ = [df[var].unique().tolist() + ['infrequent'] for z, var in enumerate(df.columns)]
+      self.enc = OneHotEncoder(handle_unknown='infrequent_if_exist', dtype = int, categories = unique_categories_)
+
+      #self.enc = utils.onehot_encoder(prefix_sep='__')   # current performance bottleneck
+      #self.enc.fit(df)    # training phase      
+      self.df_one = self.enc.fit_transform(df).toarray()   # apply one-hot encoder to categorical -> sparse dummy matrix
       assert all(np.sum(self.df_one, axis=1) == df.shape[1]), 'Row sums must be equal to number of features!!'
-      self.columns_onehot_ = self.enc.get_feature_names()   # keep this for postprocessing/explainability later
       if self.verbose : print("Matrix dimension after one-hot encoding:", self.df_one.shape)  
      
       self.alphas = np.array([self.alpha]*self.df_one.shape[1])        # Dirichlet concentration parameters; aka pseudo counts
@@ -181,13 +179,12 @@ class BHAD(BaseEstimator, OutlierMixin):
             value.
         """
         df = deepcopy(X)
-        self.df_one = self.enc_.transform(df)#.toarray()   # apply fitted one-hot encoder to categorical -> sparse dummy matrix
+        self.df_one = self.enc_.transform(df).toarray()   # apply fitted one-hot encoder to categorical -> sparse dummy matrix
         assert all(np.sum(self.df_one, axis=1) == df.shape[1]), 'Row sums must be equal to number of features!!'
 
         self.freq_updated_ = self.freq_ + self.df_one.sum(axis=0)      # update suff. stat with abs. freq. of new data levels
         #freq_updated = np.log(np.exp(self.freq) + self.df_one + alpha)    # multinomial-dirichlet
         self.log_pred = np.log((self.alphas + self.freq_updated_)/np.sum(self.alphas + self.freq_updated_))   # log posterior predictive probabilities for single trial / multinoulli
-        self.columns_onehot = self.enc_.columns_#.get_feature_names(df_str_cols)
         self.f_mat = self.freq_updated_ * self.df_one           # get level specific counts for X, e.g. test set
         f_mat_bayes = self.log_pred * self.df_one  
         self.scores = pd.Series(np.apply_along_axis(np.sum, 1, f_mat_bayes), index=X.index) 

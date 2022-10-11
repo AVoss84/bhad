@@ -6,11 +6,26 @@ import numpy as np
 import pandas as pd
 from scipy.special import loggamma
 from scipy.stats import wishart, multivariate_normal, bernoulli, multinomial
-import os, sys, warnings, functools, math
+import os, sys, warnings, functools, math, time
 from math import floor, ceil
 from copy import deepcopy
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+from functools import wraps
+
+
+# timer decorator for any function func:
+def timer(func):
+    """Print the runtime of the decorated function"""
+    @wraps(func)
+    def wrapper_timer(*args, **kwargs):
+        start_time = time.perf_counter()    
+        value = func(*args, **kwargs)
+        end_time = time.perf_counter()      
+        run_time = end_time - start_time    
+        print(f"Finished {func.__name__!r} in {run_time:.4f} secs")
+        return value
+    return wrapper_timer
 
 
 # Mimics R's paste() function for two lists:
@@ -79,7 +94,7 @@ class onehot_encoder(TransformerMixin, BaseEstimator):
 
     def transform(self, X : pd.DataFrame):
         
-        check_is_fitted(self)        # Check if fit had been called
+        check_is_fitted(self)        # Check if fit has yet been called
         self.selected_col = X.columns[~X.columns.isin(self.exclude_col)]
         # If you already have it from fit then just output it
         if hasattr(self, 'X_') and self.X_.equals(X):
@@ -101,14 +116,13 @@ class onehot_encoder(TransformerMixin, BaseEstimator):
             targets = np.array(my_index).reshape(-1)
             ohm[r,targets] = 1    
         return ohm 
-        
-
+    
+    
     def get_feature_names(self, input_features : list = None): 
 
         """
         Get feature names as used in one-hot encoder, 
         i.e. after binning/disretizing
-
         Returns:
             [numpy array]: feature names as used in discretizer, e.g. intervals
         """
@@ -131,7 +145,7 @@ class onehot_encoder(TransformerMixin, BaseEstimator):
         return np.array(self.dummy_names, dtype=object)  
 
 
-
+@timer
 class discretize(BaseEstimator, TransformerMixin):
     """
     Discretize continous features by binning. Will be used as input for Bayesian histogram anomaly detector (BHAD)
