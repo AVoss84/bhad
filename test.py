@@ -39,12 +39,12 @@ x_trans.head()
 
 # from sklearn.preprocessing import OneHotEncoder
 
-# #df = pd.DataFrame(x_train)
-# df = x_trans
+#df = pd.DataFrame(x_train)
+df = x_trans
 
-# oos_token = 'infrequent'     #'OTHERS'
-# unique_categories_ = [df[var].unique().tolist() + [oos_token] for z, var in enumerate(df.columns)]
-# unique_categories_
+oos_token = 'infrequent'     #'OTHERS'
+unique_categories_ = [df[var].unique().tolist() + [oos_token] for var in df.columns]
+unique_categories_
 
 # enc = OneHotEncoder(handle_unknown='infrequent_if_exist', dtype = int, categories = unique_categories_)
 # #enc = OneHotEncoder(handle_unknown='ignore', dtype = int, categories = [['A1', 'A2'], ['B1', 'B2'], ['C1', 'C2']])

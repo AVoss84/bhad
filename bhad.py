@@ -90,7 +90,7 @@ class BHAD(BaseEstimator, OutlierMixin):
     
       if len(self.columns)!= self.df_shape[1] : warnings.warn('Not all features in X are categorical!!')
       self.df = df
-      unique_categories_ = [df[var].unique().tolist() + ['infrequent'] for z, var in enumerate(df.columns)]
+      unique_categories_ = [df[var].unique().tolist() + ['infrequent'] for var in df.columns]
       self.enc = OneHotEncoder(handle_unknown='infrequent_if_exist', dtype = int, categories = unique_categories_)
 
       #self.enc = utils.onehot_encoder(prefix_sep='__')   # current performance bottleneck
