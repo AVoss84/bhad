@@ -7,12 +7,13 @@ The code follows a standard Scikit-learn API. Code to run the BHAD model is cont
 
 
 ```python
-import bhad, utils
+from utils import discretize
+from bhad import BHAD
 from sklearn.pipeline import Pipeline
 
 pipe = Pipeline(steps=[
-    ('discrete' , utils.discretize(nbins = 30)),   # discretizing continous features
-    ('model', bhad.BHAD(contamination = 0.01))     
+    ('discrete', discretize(nbins = 30)),   # discretize continous features
+    ('model', BHAD(contamination = 0.01))     
 ])
 ```
 
