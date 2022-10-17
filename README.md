@@ -12,7 +12,7 @@ from utils import discretize
 from bhad import BHAD
 
 pipe = Pipeline(steps=[
-    ('discrete', discretize(nbins = 30)),   # discretize continous features
+    ('discrete', discretize(nbins = None)),   # discretize continous features + Bayesian model selection
     ('model', BHAD(contamination = 0.01))     
 ])
 ```
