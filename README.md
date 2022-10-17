@@ -8,7 +8,6 @@ The code follows a standard Scikit-learn API. Code to run the BHAD model is cont
 
 ```python
 import bhad, utils
-from ... import dataset                       # your training data
 from sklearn.pipeline import Pipeline
 
 pipe = Pipeline(steps=[
