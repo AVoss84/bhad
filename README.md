@@ -20,6 +20,6 @@ pipe = Pipeline(steps=[
 For a given training dataset:
 
 ```python
-y_pred = pipe.fit_predict(X = dataset)        # fit + predict
+y_pred = pipe.fit_predict(X = dataset)        
 scores = pipe.decision_function(X = dataset)  # obtain anomaly scores
 ```
