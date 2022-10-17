@@ -7,9 +7,9 @@ The code follows a standard Scikit-learn API. Code to run the BHAD model is cont
 
 
 ```python
+from sklearn.pipeline import Pipeline
 from utils import discretize
 from bhad import BHAD
-from sklearn.pipeline import Pipeline
 
 pipe = Pipeline(steps=[
     ('discrete', discretize(nbins = 30)),   # discretize continous features
