@@ -12,8 +12,8 @@ from ... import dataset                       # your traing data
 from sklearn.pipeline import Pipeline
 
 pipe = Pipeline(steps=[
-    ('discrete' , utils.discretize(nbins = 30)),   
-    ('model', bhad.BHAD(contamination = 0.01))
+    ('discrete' , utils.discretize(nbins = 30)),   # discretizing continous features
+    ('model', bhad.BHAD(contamination = 0.01))     
 ])
 ```
 
