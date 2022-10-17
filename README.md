@@ -17,7 +17,7 @@ pipe = Pipeline(steps=[
 ])
 ```
 
-For a given training dataset:
+For a given dataset:
 
 ```python
 y_pred = pipe.fit_predict(X = dataset)        
