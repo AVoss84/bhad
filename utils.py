@@ -66,7 +66,6 @@ class discretize(BaseEstimator, TransformerMixin):
     eps: minimum value of variance of a numeric features (check for 'zero-variance features') 
     make_labels: assign integer labels to bins instead of technical intervals
     """
-    
     def __init__(self, columns : list = [], nbins : int = None, lower : float = None, k : int = 1, 
                  round_intervals : int = 5, eps : float = .001, 
                  make_labels : bool = False, 
@@ -104,7 +103,7 @@ class discretize(BaseEstimator, TransformerMixin):
             if not self.columns:
                 self.columns = df_new.select_dtypes(include=[np.number]).columns.tolist()    # numeric features only
 
-            if self.verbose: print("Used", len(self.columns), "numeric feature(s).")       
+            if self.verbose: print(f"Used {len(self.columns)} numeric feature(s) and {len(self.cat_columns)} categorical feature(s).")       
             df_new[self.columns] = df_new[self.columns].astype(float)        
             ptive_inf = float ('inf') ; ntive_inf = float('-inf')
             self.df_orig = deepcopy(df_new[self.columns + self.cat_columns])   # train data with non-discretized values for numeric features for model explainer
@@ -332,3 +331,103 @@ class mvt2mixture:
         if save_plot:
             fig.savefig('mixturePlot3D.jpg')
             print("Saved to:", os.getcwd())
+
+
+
+@timer
+class onehot_encoder(TransformerMixin, BaseEstimator):
+
+    def __init__(self, exclude_columns=[], prefix_sep = '_', oos_token = 'OTHERS', verbose = True, **kwargs):
+        """
+        One-hot encoder that handles out-of-sample levels of categorical variables
+        Args:
+            oos_token (str, optional): [description]. Defaults to 'OTHERS'.
+        """
+        self.oos_token_ = oos_token
+        self.kwargs = kwargs
+        self.exclude_col = exclude_columns
+        self.prefix_sep_ = prefix_sep
+        self.verbose = verbose
+        self.unique_categories_, self.value2name_ = dict(), dict()
+        if self.verbose : print("One-hot encoding of categorical features")
+
+    def fit(self, X):
+
+        self.selected_col = X.columns[~X.columns.isin(self.exclude_col)] 
+        if len(self.exclude_col)>0:
+            print("Features",self.exclude_col, 'excluded.')  
+        df = deepcopy(X[self.selected_col])
+        for z, var in enumerate(df.columns):
+            self.unique_categories_[var] = df[var].unique().tolist()
+            # Add 'Unknown/Others' bucket to levels for unseen levels:
+            df[var] = df[var].astype(CategoricalDtype(self.unique_categories_[var] + [self.oos_token_]))    # add unknown catgory for out of sample levels
+            one = pd.get_dummies(df[var], prefix_sep = self.prefix_sep_, prefix=var, **self.kwargs)
+            if z>0:
+               dummy = pd.concat([dummy, one], axis=1, sort=False)
+            else:
+               dummy = deepcopy(one)
+
+            # Leave out the 'OTHERS'/oos_token_ buckets here for consistency:
+            self.value2name_[var] = {level_orig:dummy_name for level_orig, dummy_name in zip(self.unique_categories_[var], list(one.columns)[:-1])}
+
+        self.dummyX_ = dummy #csr_matrix(dummy)           
+        self.columns_ = list(self.dummyX_.columns) # all final column names in sparse dummy matrix
+        self.names2index_ = {dummy_names:z for z, dummy_names in enumerate(self.columns_)} 
+        self.X_ = df
+        return self    
+
+    def transform(self, X):
+        
+        check_is_fitted(self)        # Check if fit had been called
+        self.selected_col = X.columns[~X.columns.isin(self.exclude_col)]
+
+        # If you already have it from fit then just output it
+        if hasattr(self, 'X_') and self.X_.equals(X):
+            return self.dummyX_
+ 
+        df = deepcopy(X[self.selected_col])
+        ohm = np.zeros((df.shape[0],len(self.columns_)))
+        for r, my_tuple in enumerate(df.itertuples(index=False)): 
+            my_index = []
+            for z, col in enumerate(df.columns):
+                raw_level_list = list(self.value2name_[col].keys())
+                mask = my_tuple[z] == np.array(raw_level_list)
+                if any(mask): 
+                    index = np.where(mask)[0][0]
+                    dummy_name = self.value2name_[col][raw_level_list[index]]
+                else:
+                    dummy_name = col + self.prefix_sep_ + self.oos_token_
+                my_index.append(self.names2index_[dummy_name])
+            targets = np.array(my_index).reshape(-1)
+            ohm[r,targets] = 1    
+        return ohm #pd.DataFrame(ohm,columns=self.columns_)
+        
+
+    def get_feature_names(self, input_features : list = None): 
+
+        """
+        Get feature names as used in one-hot encoder, 
+        i.e. after binning/disretizing
+
+        Returns:
+            [numpy array]: feature names as used in discretizer, e.g. intervals
+        """
+
+        check_is_fitted(self)
+        if input_features is None:
+            input_features = self.selected_col
+        self.dummy_names = []; self.dummy_names_index = {}; self.dummy_names_by_feat = {}
+        for col_name in input_features:
+            mask = [col_name in col for col in self.columns_]
+            if any(mask):
+                index = np.where(np.array(mask))[0]
+                self.dummy_names_index[col_name] = index
+                full_dummy_names_feat = np.array(self.columns_)[index].tolist()
+                # Remove separator from pandas get_dummy to retrieve original bin names from discretize fct.:
+                # Note: self.prefix_sep_ = '__' must be kept here!
+                dummy_name_2_orig_val = [item.split('__')[1] for item in full_dummy_names_feat] #{item: item.split('__')[1] for item in full_dummy_names_feat}
+                self.dummy_names_by_feat[col_name] = dummy_name_2_orig_val
+                self.dummy_names += self.dummy_names_by_feat[col_name]
+        return np.array(self.dummy_names, dtype=object)  
+
+

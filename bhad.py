@@ -66,7 +66,6 @@ class BHAD(BaseEstimator, OutlierMixin):
         self.exclude_col = exclude_col               # list with column names in X of columns to exclude for computation of the score
         super(BHAD, self).__init__()
 
-
     def __del__(self):
         class_name = self.__class__.__name__
     
@@ -87,18 +86,17 @@ class BHAD(BaseEstimator, OutlierMixin):
       df = deepcopy(X[selected_col]) 
       self.df_shape = df.shape  
       self.columns = df.select_dtypes(include='object').columns.tolist()  # use only categorical (including discretized numerical)
-    
       if len(self.columns)!= self.df_shape[1] : warnings.warn('Not all features in X are categorical!!')
       self.df = df
       unique_categories_ = [df[var].unique().tolist() + ['infrequent'] for var in df.columns]
       self.enc = OneHotEncoder(handle_unknown='infrequent_if_exist', dtype = int, categories = unique_categories_)
-
       #self.enc = utils.onehot_encoder(prefix_sep='__')   # current performance bottleneck
-      #self.enc.fit(df)    # training phase      
       self.df_one = self.enc.fit_transform(df).toarray()   # apply one-hot encoder to categorical -> sparse dummy matrix
       assert all(np.sum(self.df_one, axis=1) == df.shape[1]), 'Row sums must be equal to number of features!!'
       if self.verbose : print("Matrix dimension after one-hot encoding:", self.df_one.shape)  
-     
+           
+      self.columns_onehot_ = self.enc.get_feature_names()
+
       self.alphas = np.array([self.alpha]*self.df_one.shape[1])        # Dirichlet concentration parameters; aka pseudo counts
       self.freq = self.df_one.sum(axis=0)                                 # suff. statistics of multinomial likelihood
       self.log_pred = np.log((self.alphas + self.freq)/np.sum(self.alphas + self.freq))  # log posterior predictive probabilities for single trial / multinoulli
