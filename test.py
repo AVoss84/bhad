@@ -5,13 +5,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 from importlib import reload
 import explainer as expl
+import random
 
 reload(expl)
 
 seed = 42  
 outlier_prob_true = .01         # probab. for outlier ; should be consistent with contamination rate in your model
 k = 2                          # feature dimension 
-N = 5                     # sample size
+N = 100                     # sample size
 
 # Specify first and second moments for each component  
 bvt = util.mvt2mixture(thetas = {'mean1' : np.full(k,-1), 'mean2' : np.full(k,.5), 
@@ -24,9 +25,8 @@ y_true, dataset = bvt.draw(n_samples = N, k = k, p = outlier_prob_true)
 
 print(dataset.shape)
 
+dataset['var2'] = np.array(random.choices(['A', 'B', 'C'], k=N))
 dataset
-
-dataset['var2'] = np.array(['A', 'B', 'A', 'C', 'B'])
 
 dataset.info(verbose=True)
 
