@@ -193,7 +193,6 @@ class discretize(BaseEstimator, TransformerMixin):
         df_new[self.columns_] = df_new[self.columns_].astype(float)   
         # Update & Keep for model explainer
         self.df_orig = deepcopy(df_new[self.columns_ + self.cat_columns])  
-
         # if you already have it from fit then just output it
         if hasattr(self, 'X_') and (len(self.xindex_fitted_) == X.shape[0]):
             return self.X_
@@ -227,7 +226,7 @@ def log_post_nbins(M : int, y : np.array):
       return post_M
 
 
-def geometric_prior(M, gamma = 0.7, max_M = 100):
+def geometric_prior(M, gamma : float = 0.7, max_M : int = 100):
   """
   Geometric (power series) prior p.m.f. of M
   """
@@ -240,9 +239,9 @@ def geometric_prior(M, gamma = 0.7, max_M = 100):
 
 class mvt2mixture:
     
-    def __init__(self, thetas = {'mean1' : None, 'mean2' : None, \
+    def __init__(self, thetas : dict = {'mean1' : None, 'mean2' : None, \
                                'Sigma1' : None, 'Sigma2' : None, \
-                               'nu1': None, 'nu2': None}, seed = None, gaussian = False, **figure_param):
+                               'nu1': None, 'nu2': None}, seed : int = None, gaussian : bool = False, **figure_param):
         """
         Multivariate 2-component Student-t mixture random generator. 
         Direct random sampling via using the Student-t representation as a continous scale mixture distr.   
@@ -304,10 +303,11 @@ class mvt2mixture:
         if legend_on:
             plt.legend((la, lb), ('Outlier', 'Inlier'),
                             scatterpoints=1, loc='lower right', ncol=3, fontsize=8)
-        plt.show() ;
+        plt.show() 
         if save_plot:
             fig.savefig('mixturePlot2D.jpg')
             print("Saved to:", os.getcwd())
+
 
     def show3D(self, save_plot=False, legend_on = True, **kwargs):
         """
@@ -327,7 +327,7 @@ class mvt2mixture:
         if legend_on:
             ax.legend((la, lb), ('Outlier', 'Inlier'),
                         scatterpoints=1, loc='lower left', ncol=3, fontsize=8)    
-        plt.show();
+        plt.show()
         if save_plot:
             fig.savefig('mixturePlot3D.jpg')
             print("Saved to:", os.getcwd())
@@ -376,7 +376,7 @@ class onehot_encoder(TransformerMixin, BaseEstimator):
         self.X_ = df
         return self    
 
-    def transform(self, X):
+    def transform(self, X)-> np.array:
         
         check_is_fitted(self)        # Check if fit had been called
         self.selected_col = X.columns[~X.columns.isin(self.exclude_col)]
@@ -403,7 +403,7 @@ class onehot_encoder(TransformerMixin, BaseEstimator):
         return ohm #pd.DataFrame(ohm,columns=self.columns_)
         
 
-    def get_feature_names(self, input_features : list = None): 
+    def get_feature_names(self, input_features : list = None)-> np.array: 
 
         """
         Get feature names as used in one-hot encoder, 
