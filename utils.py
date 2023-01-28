@@ -28,17 +28,6 @@ def timer(func):
     return wrapper_timer
 
 
-# Mimics R's paste() function for two lists:
-#---------------------------------------------
-def reduce_concat(x, sep : str = ""):
-    return functools.reduce(lambda x, y: str(x) + sep + str(y), x)
-
-def paste(*lists, sep : str = " ", collapse : str = None) -> list:
-    result = map(lambda x: reduce_concat(x, sep=sep), zip(*lists))
-    if collapse is not None:
-        return reduce_concat(result, sep=collapse)
-    return list(result)
-
 
 def jitter(M: int, noise_scale: float = 10**5., seed : int = None)-> np.array:
 
@@ -283,7 +272,7 @@ class mvt2mixture:
         self.sum1 = np.multiply(Phi, rn1)
         self.sum2 = np.multiply(1-Phi, rn2)
         self.x_draws = np.add(self.sum1,self.sum2)
-        return self.phi_is, pd.DataFrame(self.x_draws,columns = paste(['var']*self.k, list(np.arange(self.k)), sep=""))
+        return self.phi_is, pd.DataFrame(self.x_draws,columns = ['var'+str(s) for s in range(self.k)])
 
 
     def show2D(self, save_plot=False, legend_on = True, **kwargs):
