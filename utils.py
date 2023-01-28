@@ -274,7 +274,6 @@ class mvt2mixture:
         self.x_draws = np.add(self.sum1,self.sum2)
         return self.phi_is, pd.DataFrame(self.x_draws,columns = ['var'+str(s) for s in range(self.k)])
 
-
     def show2D(self, save_plot=False, legend_on = True, **kwargs):
         """
         Make scatter plot for first two dimensions of the random draws
