@@ -109,7 +109,7 @@ class discretize(BaseEstimator, TransformerMixin):
             self.df_orig = deepcopy(df_new[self.columns + self.cat_columns])   # train data with non-discretized values for numeric features for model explainer
 
             for col in self.columns:
-                
+    
                     v = df_new[col].values
                     
                     # Determine optimal number of bins per feature:
@@ -236,7 +236,6 @@ def geometric_prior(M, gamma : float = 0.7, max_M : int = 100):
   return P0*(gamma**M)
 
 
-
 class mvt2mixture:
     
     def __init__(self, thetas : dict = {'mean1' : None, 'mean2' : None, \
@@ -331,7 +330,6 @@ class mvt2mixture:
         if save_plot:
             fig.savefig('mixturePlot3D.jpg')
             print("Saved to:", os.getcwd())
-
 
 
 @timer
