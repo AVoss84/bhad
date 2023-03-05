@@ -95,7 +95,7 @@ class BHAD(BaseEstimator, OutlierMixin):
       assert all(np.sum(self.df_one, axis=1) == df.shape[1]), 'Row sums must be equal to number of features!!'
       if self.verbose : print("Matrix dimension after one-hot encoding:", self.df_one.shape)  
            
-      self.columns_onehot_ = self.enc.get_feature_names()
+      self.columns_onehot_ = self.enc.get_feature_names_out()
 
       self.alphas = np.array([self.alpha]*self.df_one.shape[1])        # Dirichlet concentration parameters; aka pseudo counts
       self.freq = self.df_one.sum(axis=0)                                 # suff. statistics of multinomial likelihood
