@@ -40,7 +40,7 @@ def jitter(M: int, noise_scale: float = 10**5., seed : int = None)-> np.array:
   return np.random.random(M)/noise_scale
 
 
-@timer
+#@timer
 class discretize(BaseEstimator, TransformerMixin):
     """
     Discretize continous features by binning. Will be used as input for Bayesian histogram anomaly detector (BHAD)
@@ -98,7 +98,6 @@ class discretize(BaseEstimator, TransformerMixin):
             self.df_orig = deepcopy(df_new[self.columns + self.cat_columns])   # train data with non-discretized values for numeric features for model explainer
 
             for col in self.columns:
-    
                     v = df_new[col].values
                     
                     # Determine optimal number of bins per feature:
@@ -320,7 +319,7 @@ class mvt2mixture:
             print("Saved to:", os.getcwd())
 
 
-@timer
+#@timer
 class onehot_encoder(TransformerMixin, BaseEstimator):
 
     def __init__(self, exclude_columns=[], prefix_sep = '_', oos_token = 'OTHERS', verbose = True, **kwargs):
@@ -362,6 +361,7 @@ class onehot_encoder(TransformerMixin, BaseEstimator):
         self.X_ = df
         return self    
 
+    
     def transform(self, X)-> np.array:
         
         check_is_fitted(self)        # Check if fit had been called

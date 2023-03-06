@@ -8,7 +8,7 @@ import warnings, utils
 
 class BHAD(BaseEstimator, OutlierMixin):
     """
-    Bayesian Histogram-based Anomaly Detector (BHAD), see [1,2] for details. 
+    Bayesian Histogram-based Anomaly Detector (BHAD), see [1] for details. 
 
     Parameters
     ----------
@@ -53,8 +53,7 @@ class BHAD(BaseEstimator, OutlierMixin):
 
     Reference:
     ------------
-    [1] Vosseler, A. (2022): Unsupervised insurance fraud prediction based on anomaly detector ensembles, Risks, 10 (132)
-    [2] Vosseler, A. (2021): BHAD: Fast unsupervised anomaly detection using Bayesian histograms, Technical Report
+    [1] Vosseler, A. (2021): BHAD: Fast unsupervised anomaly detection using Bayesian histograms, Technical Report
     """
 
     def __init__(self, contamination : float = 0.01, alpha : float = 1/2, exclude_col : list = [], append_score : bool = False, verbose : bool = True):
@@ -64,12 +63,13 @@ class BHAD(BaseEstimator, OutlierMixin):
         self.verbose = verbose
         self.append_score = append_score
         self.exclude_col = exclude_col               # list with column names in X of columns to exclude for computation of the score
+        self.disc = utils.discretize(nbins = None)
         super(BHAD, self).__init__()
 
     def __del__(self):
         class_name = self.__class__.__name__
     
-    @utils.timer
+    #@utils.timer
     def _fast_bhad(self, X : pd.DataFrame)-> pd.DataFrame:
       """
       Input:
@@ -96,7 +96,6 @@ class BHAD(BaseEstimator, OutlierMixin):
       if self.verbose : print("Matrix dimension after one-hot encoding:", self.df_one.shape)  
            
       self.columns_onehot_ = self.enc.get_feature_names_out()
-
       self.alphas = np.array([self.alpha]*self.df_one.shape[1])        # Dirichlet concentration parameters; aka pseudo counts
       self.freq = self.df_one.sum(axis=0)                                 # suff. statistics of multinomial likelihood
       self.log_pred = np.log((self.alphas + self.freq)/np.sum(self.alphas + self.freq))  # log posterior predictive probabilities for single trial / multinoulli
@@ -139,6 +138,7 @@ class BHAD(BaseEstimator, OutlierMixin):
         self : BHAD object
         """
         if self.verbose : print("\nConstruct Bayesian Histogram-based Anomaly Detector (BHAD)")
+        #X_tilde = self.disc.fit_transform(X)
         self.scores = self._fast_bhad(X)
     
         if self.append_score:  
@@ -154,7 +154,7 @@ class BHAD(BaseEstimator, OutlierMixin):
         self.df_one_ = self.df_one 
         self.X_ = X
         self.df_ = self.df
-        self.xindex_fitted_ = X.index
+        self.xindex_fitted_ = self.X_.index
         self.enc_ = self.enc
         return self
 
