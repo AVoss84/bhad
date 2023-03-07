@@ -1,10 +1,12 @@
 from sklearn.base import BaseEstimator, OutlierMixin, TransformerMixin
 from sklearn.utils.validation import check_is_fitted
 from sklearn.preprocessing import OneHotEncoder
-from pandas.api.types import CategoricalDtype
+from typing import (List, Optional, Tuple)
 import numpy as np
 import pandas as pd
+from pandas.api.types import CategoricalDtype
 from scipy.special import loggamma
+from scipy.sparse import csr_matrix
 from scipy.stats import wishart, multivariate_normal, bernoulli, multinomial
 import os, sys, warnings, functools, math, time
 from math import floor, ceil
@@ -55,7 +57,7 @@ class discretize(BaseEstimator, TransformerMixin):
     eps: minimum value of variance of a numeric features (check for 'zero-variance features') 
     make_labels: assign integer labels to bins instead of technical intervals
     """
-    def __init__(self, columns : list = [], nbins : int = None, lower : float = None, k : int = 1, 
+    def __init__(self, columns : List[str] = [], nbins : int = None, lower : float = None, k : int = 1, 
                  round_intervals : int = 5, eps : float = .001, 
                  make_labels : bool = False, 
                  verbose : bool = True, prior_gamma : float = 0.9, prior_max_M : int = 50,  # Bayesian AVF (estimate number of bins M)
@@ -83,7 +85,7 @@ class discretize(BaseEstimator, TransformerMixin):
         class_name = self.__class__.__name__
         #print(class_name, "destroyed")
 
-    def fit(self, X : pd.DataFrame, y=None):
+    def fit(self, X : pd.DataFrame, y=None)-> 'discretize':
         
             assert isinstance(X, pd.DataFrame), 'Input X must be pandas dataframe!'
             self.nbins = self.nof_bins    # initialize (might be changed in case of low variance features)
@@ -123,6 +125,7 @@ class discretize(BaseEstimator, TransformerMixin):
                     if (self.lower == 0) & any(v < 0):
                         if self.verbose: print("Replacing negative values for", col)
                         v = np.where(v<0, 0, v)
+
                     # Define knots for the binning (equally spaced) -> histogram
                     if self.lower is None:
                       bounds = np.linspace(min(v)-self.k*np.std(v), max(v)+self.k*np.std(v), num = self.nbins+1)  
@@ -170,7 +173,7 @@ class discretize(BaseEstimator, TransformerMixin):
             return self
     
     
-    def transform(self, X : pd.DataFrame, y=None):
+    def transform(self, X : pd.DataFrame, y=None)-> pd.DataFrame:
         
         df_new = deepcopy(X)
         self.cat_columns = df_new.select_dtypes(include='object').columns.tolist()  # categorical (for later reference in postproc.)
@@ -179,8 +182,10 @@ class discretize(BaseEstimator, TransformerMixin):
         # Check if columns in X and X_train are compatible:
         for col in x_columns : assert col in self.columns_, 'Column {} not among loaded X_train columns!'.format(col)
         df_new[self.columns_] = df_new[self.columns_].astype(float)   
+
         # Update & Keep for model explainer
         self.df_orig = deepcopy(df_new[self.columns_ + self.cat_columns])  
+
         # if you already have it from fit then just output it
         if hasattr(self, 'X_') and (len(self.xindex_fitted_) == X.shape[0]):
             return self.X_
@@ -201,7 +206,7 @@ class discretize(BaseEstimator, TransformerMixin):
         return df_new  
 
 
-def log_post_nbins(M : int, y : np.array):
+def log_post_nbins(M : int, y : np.array)->float:
       """
       Log posterior of number of bins M
       using conjugate Jeffreys' prior for the bin probabilities 
@@ -214,7 +219,7 @@ def log_post_nbins(M : int, y : np.array):
       return post_M
 
 
-def geometric_prior(M, gamma : float = 0.7, max_M : int = 100):
+def geometric_prior(M, gamma : float = 0.7, max_M : int = 100)-> float:
   """
   Geometric (power series) prior p.m.f. of M
   """
@@ -244,7 +249,7 @@ class mvt2mixture:
         if self.seed is not None:
             np.random.seed(seed)
     
-    def draw(self, n_samples = 100, k = 2, p = .5): 
+    def draw(self, n_samples : int = 100, k : int = 2, p : float = .5)-> Tuple: 
         """
         Random number generator:
         Input:
@@ -273,7 +278,7 @@ class mvt2mixture:
         self.x_draws = np.add(self.sum1,self.sum2)
         return self.phi_is, pd.DataFrame(self.x_draws,columns = ['var'+str(s) for s in range(self.k)])
 
-    def show2D(self, save_plot=False, legend_on = True, **kwargs):
+    def show2D(self, save_plot : bool = False, legend_on : bool = True, **kwargs):
         """
         Make scatter plot for first two dimensions of the random draws
         """
@@ -295,7 +300,7 @@ class mvt2mixture:
             print("Saved to:", os.getcwd())
 
 
-    def show3D(self, save_plot=False, legend_on = True, **kwargs):
+    def show3D(self, save_plot : bool = False, legend_on : bool = True, **kwargs):
         """
         Make scatter plot for first three dimensions of the random draws
         """
@@ -322,7 +327,7 @@ class mvt2mixture:
 #@timer
 class onehot_encoder(TransformerMixin, BaseEstimator):
 
-    def __init__(self, exclude_columns=[], prefix_sep = '_', oos_token = 'OTHERS', verbose = True, **kwargs):
+    def __init__(self, exclude_columns : List[str] = [], prefix_sep : str = '_', oos_token : str = 'OTHERS', verbose : bool = True, **kwargs):
         """
         One-hot encoder that handles out-of-sample levels of categorical variables
         Args:
@@ -334,9 +339,9 @@ class onehot_encoder(TransformerMixin, BaseEstimator):
         self.prefix_sep_ = prefix_sep
         self.verbose = verbose
         self.unique_categories_, self.value2name_ = dict(), dict()
-        if self.verbose : print("One-hot encoding of categorical features")
+        if self.verbose : print("One-hot encoding categorical features")
 
-    def fit(self, X):
+    def fit(self, X: pd.DataFrame)-> 'onehot_encoder':
 
         self.selected_col = X.columns[~X.columns.isin(self.exclude_col)] 
         if len(self.exclude_col)>0:
@@ -362,7 +367,7 @@ class onehot_encoder(TransformerMixin, BaseEstimator):
         return self    
 
     
-    def transform(self, X)-> np.array:
+    def transform(self, X: pd.DataFrame)-> csr_matrix:
         
         check_is_fitted(self)        # Check if fit had been called
         self.selected_col = X.columns[~X.columns.isin(self.exclude_col)]
@@ -386,11 +391,10 @@ class onehot_encoder(TransformerMixin, BaseEstimator):
                 my_index.append(self.names2index_[dummy_name])
             targets = np.array(my_index).reshape(-1)
             ohm[r,targets] = 1    
-        return ohm #pd.DataFrame(ohm,columns=self.columns_)
+        return csr_matrix(ohm) 
         
 
-    def get_feature_names(self, input_features : list = None)-> np.array: 
-
+    def get_feature_names_out(self, input_features : list = None)-> np.array: 
         """
         Get feature names as used in one-hot encoder, 
         i.e. after binning/disretizing
@@ -398,7 +402,6 @@ class onehot_encoder(TransformerMixin, BaseEstimator):
         Returns:
             [numpy array]: feature names as used in discretizer, e.g. intervals
         """
-
         check_is_fitted(self)
         if input_features is None:
             input_features = self.selected_col
