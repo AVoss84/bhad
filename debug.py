@@ -90,19 +90,19 @@ model = bhad_old.BHAD(contamination = 0.01)
 
 y_pred_train = model.fit_predict(X_tilde)   
 scores_train = model.decision_function(X_tilde) 
+scores_train
 
 X_tilde_test = disc.fit_transform(X_test)
-y_pred_test = model.fit_predict(X_tilde_test)   
+y_pred_test = model.predict(X_tilde_test)   
 scores_test = model.decision_function(X_tilde_test) 
-
-
+scores_test
+#---------------------------------------------
 reload(bhad)
 #-------------------------------------
 
 pipe = bhad.BHAD(contamination = 0.01, verbose=False)
 
 y_pred_train = pipe.fit_predict(X_train)   
-
 scores_train = pipe.decision_function(X_train)
 
 #y_pred_test = pipe.predict(X_test)
