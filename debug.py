@@ -92,10 +92,11 @@ y_pred_train = model.fit_predict(X_tilde)
 scores_train = model.decision_function(X_tilde) 
 scores_train
 
-X_tilde_test = disc.fit_transform(X_test)
+X_tilde_test = disc.transform(X_test)
 y_pred_test = model.predict(X_tilde_test)   
 scores_test = model.decision_function(X_tilde_test) 
 scores_test
+
 #---------------------------------------------
 reload(bhad)
 #-------------------------------------

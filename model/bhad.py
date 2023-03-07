@@ -192,7 +192,7 @@ class BHAD(BaseEstimator, OutlierMixin):
         if hasattr(self, 'X_') and X.equals(self.X_): 
             X_tilde = self.Xtilde_
         else:
-            X_tilde = self.disc.fit_transform(X)
+            X_tilde = self.disc.transform(X)
         df = deepcopy(X_tilde)
         
         # df = deepcopy(X)        
