@@ -111,7 +111,8 @@ class discretize(BaseEstimator, TransformerMixin):
                         #print(f'FD rule: {utils.freedman_diaconis(v)}')
                         #lpr = {m:utils.log_post_nbins(m, v) for m in range(1,80, 1)}   # own Bayesian Block method
                         lpr = {m:(log_post_nbins(m, v) + np.log(geometric_prior(m, gamma = self.prior_gamma, max_M = self.prior_max_M))) for m in range(1,self.prior_max_M, 1)}
-                        self.nbins = max(lpr, key=lpr.get)    # compute K_MAP for each feature, see paper
+                        # Compute K_MAP for each feature, see paper
+                        self.nbins = max(lpr, key=lpr.get)    
                         if self.verbose: print('Feature {} using {} bins'.format(col, self.nbins))
                     
                     # Add some low variance white noise 
