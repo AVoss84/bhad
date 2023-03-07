@@ -360,7 +360,7 @@ class onehot_encoder(TransformerMixin, BaseEstimator):
             # Leave out the 'OTHERS'/oos_token_ buckets here for consistency:
             self.value2name_[var] = {level_orig:dummy_name for level_orig, dummy_name in zip(self.unique_categories_[var], list(one.columns)[:-1])}
 
-        self.dummyX_ = dummy #csr_matrix(dummy)           
+        self.dummyX_ = dummy         
         self.columns_ = list(self.dummyX_.columns) # all final column names in sparse dummy matrix
         self.names2index_ = {dummy_names:z for z, dummy_names in enumerate(self.columns_)} 
         self.X_ = df

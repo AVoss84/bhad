@@ -64,7 +64,7 @@ class BHAD(BaseEstimator, OutlierMixin):
         self.verbose = verbose
         self.append_score = append_score
         self.exclude_col = exclude_col               # list with column names in X of columns to exclude for computation of the score
-        self.disc = utils.discretize(nbins = None, verbose=self.verbose)
+        self.disc = utils.discretize(nbins = None, verbose=False)
         super(BHAD, self).__init__()
 
     def __del__(self):
@@ -73,7 +73,7 @@ class BHAD(BaseEstimator, OutlierMixin):
     def __repr__(self):
         return f"BHAD(contamination = {self.contamination}, alpha = {self.alpha})"
     
-    #@utils.timer
+    @utils.timer
     def _fast_bhad(self, X : pd.DataFrame)-> pd.DataFrame:
       """
       Input:
