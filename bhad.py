@@ -89,8 +89,8 @@ class BHAD(BaseEstimator, OutlierMixin):
       if len(self.columns)!= self.df_shape[1] : warnings.warn('Not all features in X are categorical!!')
       self.df = df
       unique_categories_ = [df[var].unique().tolist() + ['infrequent'] for var in df.columns]
-      self.enc = OneHotEncoder(handle_unknown='infrequent_if_exist', dtype = int, categories = unique_categories_)
-      #self.enc = utils.onehot_encoder(prefix_sep='__')   # current performance bottleneck
+      #self.enc = OneHotEncoder(handle_unknown='infrequent_if_exist', dtype = int, categories = unique_categories_)
+      self.enc = utils.onehot_encoder(prefix_sep='__')   # current performance bottleneck
       self.df_one = self.enc.fit_transform(df).toarray()   # apply one-hot encoder to categorical -> sparse dummy matrix
       assert all(np.sum(self.df_one, axis=1) == df.shape[1]), 'Row sums must be equal to number of features!!'
       if self.verbose : print("Matrix dimension after one-hot encoding:", self.df_one.shape)  
