@@ -1,4 +1,5 @@
 import model.bhad as bhad
+import model.bhad_old as bhad_old
 import model.utils as util
 import numpy as np
 import matplotlib.pyplot as plt
@@ -37,7 +38,7 @@ reload(bhad)
 # scores = pipe.decision_function(dataset)
 # scores
 
-reload(bhad)
+#reload(bhad)
 #-------------------------------------
 # disc = util.discretize(nbins = None, verbose = False)
 
@@ -63,6 +64,38 @@ print(X_test.shape)
 print(np.unique(y_train, return_counts=True))
 print(np.unique(y_test, return_counts=True))
 
+
+from sklearn.pipeline import Pipeline
+
+reload(bhad_old)
+reload(util)
+
+pipe = Pipeline(steps=[
+    # if nbins = None, this will automatically select the optimal bin numbers 
+    # based on the MAP estimate (but will make computation slower!)
+    ('discrete' , util.discretize(nbins = None, verbose = False)),      # step only needed if continous features are present
+    ('model', bhad_old.BHAD(contamination = 0.01))
+])
+
+y_pred_train = pipe.fit_predict(X_train)   
+scores_train = pipe.decision_function(X_train) 
+
+y_pred_test = pipe.predict(X_test)
+scores_test = pipe.decision_function(X_test)
+#---------------------------------------------
+disc = util.discretize(nbins = None, verbose = False)
+X_tilde = disc.fit_transform(X_train)
+
+model = bhad_old.BHAD(contamination = 0.01)
+
+y_pred_train = model.fit_predict(X_tilde)   
+scores_train = model.decision_function(X_tilde) 
+
+X_tilde_test = disc.fit_transform(X_test)
+y_pred_test = model.fit_predict(X_tilde_test)   
+scores_test = model.decision_function(X_tilde_test) 
+
+
 reload(bhad)
 #-------------------------------------
 
@@ -72,4 +105,30 @@ y_pred_train = pipe.fit_predict(X_train)
 
 scores_train = pipe.decision_function(X_train)
 
-y_pred_test = pipe.predict(X_test)
+#y_pred_test = pipe.predict(X_test)
+#------------------------------------------------
+
+import pandas as pd
+from copy import deepcopy 
+
+X_tilde = pipe.disc.fit_transform(X_test)
+
+df = X_tilde
+df
+X = deepcopy(X_test)        
+
+df_one = pipe.enc_.transform(df).toarray()   # apply fitted one-hot encoder to categorical -> sparse dummy matrix
+assert all(np.sum(pipe.df_one, axis=1) == df.shape[1]), 'Row sums must be equal to number of features!!'
+
+df_one
+
+# Update suff. stat with abs. freq. of new data points/levels
+freq_updated_ = pipe.freq_ + pipe.df_one.sum(axis=0)      
+#freq_updated = np.log(np.exp(self.freq) + self.df_one + alpha)    # multinomial-dirichlet
+
+# Log posterior predictive probabilities for single trial / multinoulli
+log_pred = np.log((pipe.alphas + freq_updated_)/np.sum(pipe.alphas + pipe.freq_updated_))   
+f_mat = freq_updated_ * df_one           # get level specific counts for X, e.g. test set
+f_mat_bayes = log_pred * df_one  
+scores = pd.Series(np.apply_along_axis(np.sum, 1, f_mat_bayes), index=X.index) 
+scores
