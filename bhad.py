@@ -8,7 +8,7 @@ import warnings, utils
 
 class BHAD(BaseEstimator, OutlierMixin):
     """
-    Bayesian Histogram-based Anomaly Detector (BHAD), see [1,2] for details. 
+    Bayesian Histogram-based Anomaly Detector (BHAD), see [1] for details. 
 
     Parameters
     ----------
@@ -53,8 +53,7 @@ class BHAD(BaseEstimator, OutlierMixin):
 
     Reference:
     ------------
-    [1] Vosseler, A. (2022): Unsupervised insurance fraud prediction based on anomaly detector ensembles, Risks, 10 (132)
-    [2] Vosseler, A. (2021): BHAD: Fast unsupervised anomaly detection using Bayesian histograms, Technical Report
+    [1] Vosseler, A. (2021): BHAD: Fast unsupervised anomaly detection using Bayesian histograms, Technical Report
     """
 
     def __init__(self, contamination : float = 0.01, alpha : float = 1/2, exclude_col : list = [], append_score : bool = False, verbose : bool = True):
@@ -63,7 +62,8 @@ class BHAD(BaseEstimator, OutlierMixin):
         self.alpha = alpha                              # uniform Dirichlet prior concentration parameter used for each feature
         self.verbose = verbose
         self.append_score = append_score
-        self.exclude_col = exclude_col               # list with column names in X of columns to exclude for computation of the score
+        self.exclude_col = exclude_col  
+        self.disc = utils.discretize(nbins = None)             # list with column names in X of columns to exclude for computation of the score
         super(BHAD, self).__init__()
 
     def __del__(self):
@@ -139,7 +139,8 @@ class BHAD(BaseEstimator, OutlierMixin):
         self : BHAD object
         """
         if self.verbose : print("\nConstruct Bayesian Histogram-based Anomaly Detector (BHAD)")
-        self.scores = self._fast_bhad(X)
+        X_tilde = self.disc.fit_transform(X)
+        self.scores = self._fast_bhad(X_tilde)
     
         if self.append_score:  
             self.threshold = np.nanpercentile(self.scores['outlier_score'].tolist(), q=100*self.contamination)
