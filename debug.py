@@ -8,7 +8,7 @@ from importlib import reload
 seed = 42  
 outlier_prob_true = .01         # probab. for outlier ; should be consistent with contamination rate in your model
 k = 30                          # feature dimension 
-N = 2*10**4                     # sample size
+N = 2*10**3                     # sample size
 
 # Specify first and second moments for each component  
 bvt = util.mvt2mixture(thetas = {'mean1' : np.full(k,-1), 'mean2' : np.full(k,.5), 
