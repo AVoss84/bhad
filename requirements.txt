@@ -1,6 +1,0 @@
-pandas==1.0.5
-scikit_learn==1.1.2
-matplotlib
-statsmodels
-tqdm
-ipykernel
