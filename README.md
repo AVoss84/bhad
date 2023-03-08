@@ -16,19 +16,14 @@ pip install -e src
 ## Usage
 
 ```python
-from sklearn.pipeline import Pipeline
-from utils import discretize
-from bhad import BHAD
+from bhad.model import BHAD
 
-pipe = Pipeline(steps=[
-    ('discrete', discretize(nbins = None)),   # discretize continous features + Bayesian model selection
-    ('model', BHAD(contamination = 0.01))     
-])
+bm = BHAD(contamination = 0.01, nbins = None)  
 ```
 
 For a given dataset:
 
 ```python
-y_pred = pipe.fit_predict(X = dataset)        
-scores = pipe.decision_function(X = dataset)  # obtain anomaly scores
+y_pred = bm.fit_predict(X = dataset)        
+scores = bm.anomaly_scores             # obtain anomaly scores
 ```
