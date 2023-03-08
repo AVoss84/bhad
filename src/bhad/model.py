@@ -66,7 +66,7 @@ class BHAD(BaseEstimator, OutlierMixin):
         self.exclude_col = exclude_col               # list with column names in X of columns to exclude for computation of the score
         self.disc = utils.discretize(nbins = nbins, verbose = False)
         if self.verbose :
-            print("\n-- Construct Bayesian Histogram-based Anomaly Detector (BHAD) --\n")
+            print("\n-- Bayesian Histogram-based Anomaly Detector (BHAD) --\n")
             print(f'Using {nbins} number of bins.' if nbins else 'Computing Bayes estimate for number of bins per dimension.')
         super(BHAD, self).__init__()
 
