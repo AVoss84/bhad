@@ -224,7 +224,7 @@ def geometric_prior(M, gamma : float = 0.7, max_M : int = 100)-> float:
   """
   Geometric (power series) prior p.m.f. of M
   """
-  #gamma = (gamma < 1)*gamma    # assuming |gamma| < 1 for convergence of the series
+  # assuming |gamma| < 1 for convergence of the series
   gamma = gamma if 0 < gamma < 1 else 0    # indicator function according to uniform prior 
   P0 = (1-gamma)/(1-gamma**(max_M))
   return P0*(gamma**M)

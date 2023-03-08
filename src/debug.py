@@ -1,6 +1,5 @@
-import model.bhad as bhad
-import model.bhad_old as bhad_old
-import model.utils as util
+from bhad import model
+import bhad.utils as utils
 import numpy as np
 import matplotlib.pyplot as plt
 from importlib import reload
@@ -11,7 +10,7 @@ k = 30                          # feature dimension
 N = 2*10**3                     # sample size
 
 # Specify first and second moments for each component  
-bvt = util.mvt2mixture(thetas = {'mean1' : np.full(k,-1), 'mean2' : np.full(k,.5), 
+bvt = utils.mvt2mixture(thetas = {'mean1' : np.full(k,-1), 'mean2' : np.full(k,.5), 
                                 'Sigma1' : np.eye(k)*.4, 'Sigma2' : np.eye(k)*.1, 
                                 'nu1': 3.*k, 'nu2': 3.*k}, seed = seed, gaussian = False)
 
@@ -22,7 +21,7 @@ y_true, dataset = bvt.draw(n_samples = N, k = k, p = outlier_prob_true)
 print(dataset.shape)
 
 
-reload(bhad)
+reload(model)
 
 # from sklearn.pipeline import Pipeline
 

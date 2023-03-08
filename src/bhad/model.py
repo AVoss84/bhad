@@ -4,8 +4,8 @@ from typing import (List, Optional)
 import numpy as np
 import pandas as pd
 from copy import deepcopy
-import warnings, model.utils as utils
-
+import warnings
+import bhad.utils as utils
 
 class BHAD(BaseEstimator, OutlierMixin):
     """
