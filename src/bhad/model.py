@@ -64,7 +64,7 @@ class BHAD(BaseEstimator, OutlierMixin):
         self.verbose = verbose
         self.append_score = append_score
         self.exclude_col = exclude_col               # list with column names in X of columns to exclude for computation of the score
-        self.disc = utils.discretize(nbins = nbins, verbose = True)
+        self.disc = utils.discretize(nbins = nbins, verbose = False)
         if self.verbose :
             print("\n-- Construct Bayesian Histogram-based Anomaly Detector (BHAD) --\n")
             print(f'Using {nbins} number of bins.' if nbins else 'Computing Bayes estimate for number of bins per dimension.')
@@ -242,6 +242,7 @@ class BHAD(BaseEstimator, OutlierMixin):
         """
         # Center scores; divide into outlier and inlier (-/+)
         if hasattr(self, 'X_') and X.equals(self.X_): 
+            if self.verbose : print("Score input data.")
             self.anomaly_scores = self.scores_.to_numpy() - self.threshold_
         else:    
             self.anomaly_scores = self.score_samples(X).to_numpy() - self.threshold_
