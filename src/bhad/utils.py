@@ -59,8 +59,7 @@ class discretize(BaseEstimator, TransformerMixin):
     make_labels: assign integer labels to bins instead of technical intervals
     """
     def __init__(self, columns : List[str] = [], nbins : int = None, lower : float = None, k : int = 1, 
-                 round_intervals : int = 5, eps : float = .001, 
-                 make_labels : bool = False, 
+                 round_intervals : int = 5, eps : float = .001, make_labels : bool = False, 
                  verbose : bool = True, prior_gamma : float = 0.9, prior_max_M : int = 50,  # estimate number of bins M
                  **kwargs):
         
@@ -76,7 +75,9 @@ class discretize(BaseEstimator, TransformerMixin):
         self.prior_max_M = prior_max_M
         self.eps = eps                           # threshold for close-to-zero-variance
         self.make_labels = make_labels
-        
+        if verbose : print(f'Using {nbins} number of bins.' if nbins else 'Computing Bayes estimate for number of bins per dimension.')
+        if self.verbose : print("Discretize continous features.")
+
         if self.lower and (self.lower != 0):
             if self.verbose : warnings.warn("'\nNote: lower != 0 not supported currently, will be set to None!'")
             self.lower = None 

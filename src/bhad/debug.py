@@ -21,22 +21,6 @@ y_true, dataset = bvt.draw(n_samples = N, k = k, p = outlier_prob_true)
 print(dataset.shape)
 
 
-reload(model)
-
-# from sklearn.pipeline import Pipeline
-
-# pipe = Pipeline(steps=[
-#     # if nbins = None, this will automatically select the optimal bin numbers 
-#     # based on the MAP estimate (but will make computation slower!)
-#     ('discrete' , util.discretize(nbins = None, verbose = False)),      # step only needed if continous features are present
-#     ('model', bhad.BHAD(contamination = 0.01))
-# ])
-
-# yhat = pipe.fit_predict(dataset)
-# #pipe.score_samples(dataset)   
-# scores = pipe.decision_function(dataset)
-# scores
-
 #reload(bhad)
 #-------------------------------------
 # disc = util.discretize(nbins = None, verbose = False)
@@ -64,6 +48,38 @@ print(np.unique(y_train, return_counts=True))
 print(np.unique(y_test, return_counts=True))
 
 
+reload(model)
+
+from sklearn.pipeline import Pipeline
+
+pipe = Pipeline(steps=[
+    ('discrete' , utils.discretize(nbins = None, verbose = False)),      # step only needed if continous features are present
+    ('model', model.BHAD(contamination = 0.01))
+])
+
+y_pred_train = pipe.fit_predict(X_train)
+#pipe.score_samples(dataset)   
+scores_train = pipe.decision_function(X_train)
+scores_train
+
+
+
+
+
+
+reload(model)
+reload(utils)
+
+bm = model.BHAD(contamination = 0.01, nbins = None, verbose=True)
+
+y_pred_train = bm.fit_predict(X_train)   
+#scores_train = bm.decision_function(X_train)
+scores_train = bm.anomaly_scores
+
+
+
+
+
 from sklearn.pipeline import Pipeline
 
 reload(bhad_old)
@@ -82,10 +98,12 @@ scores_train = pipe.decision_function(X_train)
 y_pred_test = pipe.predict(X_test)
 scores_test = pipe.decision_function(X_test)
 #---------------------------------------------
-disc = util.discretize(nbins = None, verbose = False)
+disc = utils.discretize(nbins = None, verbose = False)
 X_tilde = disc.fit_transform(X_train)
 
-model = bhad_old.BHAD(contamination = 0.01)
+model = model.BHAD(contamination = 0.01)
+
+model.fit(X_tilde)   
 
 y_pred_train = model.fit_predict(X_tilde)   
 scores_train = model.decision_function(X_tilde) 
