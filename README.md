@@ -17,8 +17,8 @@ pip install -e src
 
 ```python
 from sklearn.pipeline import Pipeline
-from utils import discretize
-from bhad import BHAD
+from bhad.utils import discretize
+from bhad.model import BHAD
 
 pipe = Pipeline(steps=[
     ('discrete', discretize(nbins = None)),   # discretize continous features + model selection
