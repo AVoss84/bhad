@@ -8,8 +8,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.1]
 ### Changed
-- Move discretize + Bayesian model selection part in BHAD class
-- No sklearn pipeline needed anymore therefore
 - complement type hints
 - add python package structure
 - add verbose
