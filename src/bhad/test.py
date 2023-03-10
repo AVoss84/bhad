@@ -12,8 +12,8 @@ reload(expl)
 seed = 42  
 outlier_prob_true = .01         # probab. for outlier ; should be consistent with contamination rate in your model
 
-k = 2                          # feature dimension 
-N = 100                     # sample size
+k = 33                          # feature dimension 
+N = 10**4                     # sample size
 
 # Specify first and second moments for each component  
 bvt = mvt2mixture(thetas = {'mean1' : np.full(k,-1), 'mean2' : np.full(k,.5), 
@@ -26,8 +26,8 @@ y_true, dataset = bvt.draw(n_samples = N, k = k, p = outlier_prob_true)
 
 print(dataset.shape)
 
-dataset['var2'] = np.array(random.choices(['A', 'B', 'C'], k=N))
-dataset
+# dataset['var30'] = np.array(random.choices(['A', 'B', 'C'], k=N))
+# dataset
 
 dataset.info(verbose=True)
 
@@ -39,7 +39,7 @@ dataset.select_dtypes(include=['object'])
 from sklearn.pipeline import Pipeline
 
 
-x_trans = discretize(nbins = 3).fit_transform(dataset)
+x_trans = discretize(nbins = 20).fit_transform(dataset)
 
 x_trans.head()
 
@@ -81,8 +81,8 @@ x_trans.info(verbose=True)
 # x_dummy.shape
 
 
-bh = BHAD(contamination = 0.01)
-bh
+# bh = BHAD(contamination = 0.01)
+# bh
 # print(bh.__dict__)
 
 # bh.fit(x_trans)
@@ -93,15 +93,19 @@ dataset.dtypes
 
 from sklearn.pipeline import Pipeline
 
+num = list(dataset.columns)
+# num.remove('var30')
+num
+
 pipe = Pipeline(steps=[
     ('discrete' , discretize(nbins = None, verbose = False)),      # step only needed if continous features are present
-    ('model', BHAD(contamination = 0.01, numeric_features = ['var0', 'var1'], cat_features=['var2']))
+    #('model', BHAD(contamination = 0.01, numeric_features = num, cat_features=['var30']))
+    ('model', BHAD(contamination = 0.01, numeric_features = num))
 ])
 
 pipe.fit(dataset)
 
-scores_train = pipe.decision_function(dataset)
-
+#scores_train = pipe.decision_function(dataset)
 #y_pred = pipe.fit_predict(dataset)     
 
 disc = pipe.named_steps['discrete']
@@ -113,4 +117,8 @@ ex = expl.Explainer(model, disc)
 
 ex.fit()
 
-ex.explain_bhad()
+df_orig, expl_thresholds = ex.explain_bhad()
+
+for obs, i in enumerate(df_orig.explanation.values):
+    print('\nObs.:', obs, i)
+

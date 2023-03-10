@@ -34,10 +34,14 @@ def timer(func):
 
 
 #---------------------------------------------
-def reduce_concat(x, sep : str = ""):
-    return functools.reduce(lambda x, y: str(x) + sep + str(y), x)
+def paste(*lists, sep : str = " ", collapse : str = None)-> List[str]:
+    """
+    Concatenate/Collapse two lists of strings, separate elements by sep.
+    Mimics the paste function in R.
+    """ 
+    def reduce_concat(x, sep : str = ""):
+        return functools.reduce(lambda x, y: str(x) + sep + str(y), x)
 
-def paste(*lists, sep : str = " ", collapse : str = None):
     result = map(lambda x: reduce_concat(x, sep=sep), zip(*lists))
     if collapse is not None:
         return reduce_concat(result, sep=collapse)

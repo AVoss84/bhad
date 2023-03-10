@@ -1,10 +1,11 @@
 import numpy as np
 import pandas as pd
 from math import isnan
+from collections import defaultdict
 from statsmodels.distributions.empirical_distribution import ECDF
 from sklearn.utils.validation import check_is_fitted
 from copy import deepcopy
-from tqdm.auto import tqdm       # progress bar
+from tqdm.auto import tqdm       
 from typing import (List, Optional, Union, Tuple, Type)
 import bhad.utils as utils
 
@@ -42,12 +43,12 @@ class Explainer:
         self.feature_distr_, self.modes_, self.cdfs_ = self.calc_categorical_margins()
         return self
 
-    def calc_categorical_margins(self):
+    def calc_categorical_margins(self)-> Tuple[dict, dict, dict]:
         """
         Calculate marginal frequency distr. and empirical cdfs per feature, 
         used in model explanation. df_orig must be the train set.
         Input:
-        df_original : dataframe inlc. numeric features with original values before discretization;
+        df_original : dataframe incl. numeric features with original values before discretization;
                       will be used to estimate c.d.f. of continous feature
         """
         df_orig = deepcopy(self.disc.df_orig_)
@@ -72,27 +73,34 @@ class Explainer:
         return feat_info, modes, cdfs
     
     
-    def _make_explanation_string(self, names_i : List[str], values_i : List[float]):
-        
-        # Convert techy names to business friendly names in Filtered-MFT xls:
-        #----------------------------------------------------------------------
-        config_post = {} #config_meta.post['post_processing']['template']   # get postprocessor.yaml template
-        feat_names_tech = list(config_post.keys())               # techy names
-        tec2biz = {na : config_post.get(na,{})[na] for na in feat_names_tech}   # create techy-to-business names mapping dict 
-        
+    def _make_explanation_string(self, names_i : List[str], values_i : List[float])-> List[str]:
+        """Create local explanation as a string with most relevant features per obseravtion. 
+           State their relative position in the respective marginal density/mass function.
+
+        Args:
+            names_i (List[str]): _description_
+            values_i (List[float]): _description_
+
+        Returns:
+            List[str]: _description_
+        """
+        # Convert techy names to human friendly names
+        #---------------------------------------------------
+        tec2biz = defaultdict(str, {names: names for names in self.disc.df_orig_.columns})     # here both are the same; but can be easily modified    
         names, values = [], []
         for name, val in zip(names_i, values_i):   
-            if ~(isnan(val) | np.isnan(val)):    # filter out individual values with NaNs from individual explanation
+            #if ~(isnan(val) | np.isnan(val)):     # filter out individual numeric values with NaNs from individual explanation
                 if name in self.avf.numeric_features_:
-                    ecdf = self.cdfs_[name]   
-                    # Evaluate 1D estimated cdf step function:
-                    try: 
-                        names.append(tec2biz[name]+' (Cumul.perc.: '+str(round(ecdf(val),2))+')')
-                    except Exception as ex:
-                        print(ex)
-                        names.append(name+' (Cumul.perc.: '+str(round(ecdf(val),2))+')')
-                        
-                    values.append(str(round(val,2)))
+                    if isinstance(val, (int, float)) and ~(isnan(val) | np.isnan(val)):
+                        ecdf = self.cdfs_[name]   
+                        # Evaluate 1D estimated cdf step function:
+                        try: 
+                            names.append(tec2biz[name]+' (Cumul.perc.: '+str(round(ecdf(val),2))+')')
+                        except Exception as ex:
+                            print(ex)
+                            names.append(name+' (Cumul.perc.: '+str(round(ecdf(val),2))+')')
+                        values.append(str(round(val,2)))
+
                 elif name in self.avf.cat_features_:
                     search_index = np.array(self.feature_distr_[name].index.tolist())
                     comp = str(val) == search_index
@@ -154,10 +162,6 @@ class Explainer:
             if not any(df_relfreq[col].values <= self.expl_thresholds[z]):
                 self.expl_thresholds[z] = min(min(df_relfreq[col].values),.8)    # to exclude minima = 1.0 (-> cannot be outliers!)     
 
-            # This is a quick & dirty fix in case you have included LoB as a control variable
-            # do not use it in the model explanation 
-            if '_lob' in col: self.expl_thresholds[z] = -1000    # set its threshold to an impossible value vs. (0,1), hence will never be picked up
-
             df_filter[:,z] = df_relfreq[col].values <= self.expl_thresholds[z]   
 
         df_filter_twist = df_filter[i,j]
@@ -179,5 +183,4 @@ class Explainer:
                df_orig.loc[obs, 'explanation'] = self._make_explanation_string(names_i, values_i)  
             else:   
                df_orig.loc[obs, 'explanation'] = None   
-
         return  df_orig, self.expl_thresholds
