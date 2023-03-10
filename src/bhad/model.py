@@ -64,7 +64,8 @@ class BHAD(BaseEstimator, OutlierMixin):
         self.verbose = verbose
         self.append_score = append_score
         self.exclude_col = exclude_col               # list with column names in X of columns to exclude for computation of the score
-        if self.verbose : print("\n-- Bayesian Histogram-based Anomaly Detector (BHAD) --\n")
+        if self.verbose : 
+            print("\n-- Bayesian Histogram-based Anomaly Detector (BHAD) --\n")
         super(BHAD, self).__init__()
 
     def __del__(self):
@@ -100,7 +101,8 @@ class BHAD(BaseEstimator, OutlierMixin):
       self.enc = utils.onehot_encoder(prefix_sep='__', verbose=self.verbose)   # more flexible but much slower
       self.df_one = self.enc.fit_transform(df).toarray()   
       assert all(np.sum(self.df_one, axis=1) == df.shape[1]), 'Row sums must be equal to number of features!!'
-      if self.verbose : print("Matrix dimension after one-hot encoding:", self.df_one.shape)  
+      if self.verbose : 
+        print("Matrix dimension after one-hot encoding:", self.df_one.shape)  
       self.columns_onehot_ = self.enc.get_feature_names_out()
       
       # Prior parameters and sufficient statistics:
