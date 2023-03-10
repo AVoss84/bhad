@@ -1,5 +1,5 @@
 from sklearn.base import BaseEstimator, OutlierMixin
-from sklearn.preprocessing import OneHotEncoder
+#from sklearn.preprocessing import OneHotEncoder
 from typing import (List, Optional)
 import numpy as np
 import pandas as pd
@@ -57,17 +57,15 @@ class BHAD(BaseEstimator, OutlierMixin):
     [1] Vosseler, A. (2021): BHAD: Fast unsupervised anomaly detection using Bayesian histograms, Technical Report
     """
 
-    def __init__(self, contamination : float = 0.01, alpha : float = 1/2, exclude_col : Optional[List[str]] = [], append_score : bool = False, nbins : int = None, verbose : bool = True):
+    def __init__(self, contamination : float = 0.01, alpha : float = 1/2, exclude_col : Optional[List[str]] = None, append_score : bool = False, verbose : bool = True):
         
         self.contamination = contamination              # outlier proportion in the dataset
         self.alpha = alpha                              # uniform Dirichlet prior concentration parameter used for each feature
         self.verbose = verbose
         self.append_score = append_score
         self.exclude_col = exclude_col               # list with column names in X of columns to exclude for computation of the score
-        self.disc = utils.discretize(nbins = nbins, verbose = False)
-        if self.verbose :
+        if self.verbose : 
             print("\n-- Bayesian Histogram-based Anomaly Detector (BHAD) --\n")
-            print(f'Using {nbins} number of bins.' if nbins else 'Computing Bayes estimate for number of bins per dimension.')
         super(BHAD, self).__init__()
 
     def __del__(self):
@@ -76,7 +74,6 @@ class BHAD(BaseEstimator, OutlierMixin):
     def __repr__(self):
         return f"BHAD(contamination = {self.contamination}, alpha = {self.alpha})"
     
-    #@utils.timer
     def _fast_bhad(self, X : pd.DataFrame)-> pd.DataFrame:
       """
       Input:
@@ -104,7 +101,8 @@ class BHAD(BaseEstimator, OutlierMixin):
       self.enc = utils.onehot_encoder(prefix_sep='__', verbose=self.verbose)   # more flexible but much slower
       self.df_one = self.enc.fit_transform(df).toarray()   
       assert all(np.sum(self.df_one, axis=1) == df.shape[1]), 'Row sums must be equal to number of features!!'
-      if self.verbose : print("Matrix dimension after one-hot encoding:", self.df_one.shape)  
+      if self.verbose : 
+        print("Matrix dimension after one-hot encoding:", self.df_one.shape)  
       self.columns_onehot_ = self.enc.get_feature_names_out()
       
       # Prior parameters and sufficient statistics:
@@ -152,16 +150,11 @@ class BHAD(BaseEstimator, OutlierMixin):
         -------
         self : BHAD object
         """
-        # Discretize continous variables
-        # and estimate number of bins per feature
-        #------------------------------------------
-        self.Xtilde_ = self.disc.fit_transform(X)
-        if self.verbose : print("Discretize continous features.")
-        
         # Fit model: 
         #------------
-        self.scores = self._fast_bhad(self.Xtilde_)
-        if self.verbose : print("Fit BHAD on discretized data.")
+        if self.verbose : 
+            print("Fit BHAD on discretized data.")
+        self.scores = self._fast_bhad(X)
         if self.append_score:  
             self.threshold_ = np.nanpercentile(self.scores['outlier_score'].tolist(), q=100*self.contamination)
         else: 
@@ -242,7 +235,8 @@ class BHAD(BaseEstimator, OutlierMixin):
         """
         # Center scores; divide into outlier and inlier (-/+)
         if hasattr(self, 'X_') and X.equals(self.X_): 
-            if self.verbose : print("Score input data.")
+            if self.verbose : 
+                print("Score input data.")
             self.anomaly_scores = self.scores_.to_numpy() - self.threshold_
         else:    
             self.anomaly_scores = self.score_samples(X).to_numpy() - self.threshold_
