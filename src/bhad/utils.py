@@ -1,15 +1,15 @@
 from sklearn.base import BaseEstimator, OutlierMixin, TransformerMixin
 from sklearn.utils.validation import check_is_fitted
-from sklearn.preprocessing import OneHotEncoder
-from typing import (List, Optional, Tuple)
+#from sklearn.preprocessing import OneHotEncoder
+from typing import (List, Tuple)
 import numpy as np
 import pandas as pd
 from pandas.api.types import CategoricalDtype
 from scipy.special import loggamma
 from scipy.integrate import simpson
 from scipy.sparse import csr_matrix
-from scipy.stats import wishart, multivariate_normal, bernoulli, multinomial, beta, norm
-from scipy.stats import t as student
+from scipy.stats import wishart, bernoulli, norm
+#from scipy.stats import t as student
 from scipy.optimize import minimize_scalar
 import os, sys, warnings, functools, math, time
 from math import floor, ceil
@@ -120,9 +120,6 @@ class discretize(BaseEstimator, TransformerMixin):
                         
                         # Evaluate log joint posterior of grid of number of bin values:
                         #---------------------------------------------------------------
-                        #lpr = {m:log_joint_post_nbins_gamma(m, gamma=self.prior_gamma, y=v, max_M=self.prior_max_M) for m in range(1,self.prior_max_M, 1)}
-                        #lpr = {m:(log_marg_nbins(m, y=v) + np.log(geometric_prior(m, gamma = self.prior_gamma, max_M = self.prior_max_M))) for m in range(1,self.prior_max_M, 1)}
-
                         log_marg_prior_nbins = {m : np.log(1e-10 + simpson(np.array([geometric_prior(M = m, gamma = g, max_M = self.prior_max_M, log = False) for g in self.gamma_grid]), self.gamma_grid)) for m in range(1, self.prior_max_M, 1)}
                         
                         lpr = {m : log_marg_prior_nbins[m] + log_marglike_nbins(M = m, y = v) for m in range(1,self.prior_max_M, 1)}
@@ -138,10 +135,12 @@ class discretize(BaseEstimator, TransformerMixin):
                     if (np.nanvar(v) < self.eps):                # check for close to zero-variance feature .np.nanstd(v)
                         self.nbins = len(set(v))
                         v += jitter(M = len(v), noise_scale = 10**5.)
-                        if self.verbose: print("{} has close to zero variance - jitter applied! Overwriting nbins to {}.".format(col, self.nbins))
+                        if self.verbose: 
+                            print("{} has close to zero variance - jitter applied! Overwriting nbins to {}.".format(col, self.nbins))
 
                     if (self.lower == 0) & any(v < 0):
-                        if self.verbose: print("Replacing negative values for", col)
+                        if self.verbose: 
+                            print("Replacing negative values for", col)
                         v = np.where(v<0, 0, v)
 
                     # Define knots for the binning (equally spaced) -> histogram
@@ -186,7 +185,8 @@ class discretize(BaseEstimator, TransformerMixin):
             self.eps_ = self.eps 
             self.make_labels_ = self.make_labels 
             #self.df_orig_ = deepcopy(self.df_orig)
-            if self.verbose and (self.nof_bins is not None): print("Binned continous features into", self.nbins,"bins.")
+            if self.verbose and (self.nof_bins is not None): 
+                print("Binned continous features into", self.nbins,"bins.")
             return self
     
     @timer
@@ -257,7 +257,7 @@ def log_marglike_nbins(M : int, y : np.array)->float:
     log-likelihood of the number of bins  
     """
     N = len(y)
-    counts, bin_edges = np.histogram(y, bins = np.linspace(min(y), max(y), M+1))   # evenly spaced bins
+    counts, _ = np.histogram(y, bins = np.linspace(min(y), max(y), M+1))   # evenly spaced bins
     post_M = N*np.log(M) + loggamma(M/2) -M*loggamma(1/2) -loggamma(N + M/2) + np.sum(loggamma(counts + 1/2)) 
     return post_M
 
@@ -268,7 +268,7 @@ def exp_normalize(x : np.array)-> np.array:
     return y / y.sum()
 
 
-def geometric_prior(M, gamma : float = 0.7, max_M : int = 100, log : bool = False)-> float:
+def geometric_prior(M : int, gamma : float = 0.7, max_M : int = 100, log : bool = False)-> float:
     """
     Geometric (power series) prior
     Args:
@@ -329,7 +329,8 @@ def rbartsim(MCsim : int = 10**4, seed : int = None, verbose : bool = True):
     accepted = u <= accratio(x)/M
     draws = x[accepted]               # accepted random draws from proposal
     rate = sum(accepted)/MCsim        # acceptance rate 
-    if verbose : print(f'Acceptance rate: {rate}\n')  
+    if verbose : 
+        print(f'Acceptance rate: {rate}\n')  
     return draws
 
 class mvt2mixture:
