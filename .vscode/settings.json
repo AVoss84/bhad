@@ -1,3 +1,5 @@
 {
-  "python.defaultInterpreterPath": "C:\\Users\\Alexander\\miniforge3\\envs\\myenv\\bin\\python.exe"
+  "python.defaultInterpreterPath": "C:\\Users\\Alexander\\miniforge3\\envs\\myenv\\bin\\python.exe",
+  "python.linting.pylintEnabled": true,
+  "python.linting.enabled": true
 }
