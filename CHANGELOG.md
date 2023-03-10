@@ -14,4 +14,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - make scoring more efficient
 
 
-
+## [1.0.2]
+### Changed
+- add local model explainer module
