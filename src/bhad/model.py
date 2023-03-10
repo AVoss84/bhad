@@ -93,7 +93,7 @@ class BHAD(BaseEstimator, OutlierMixin):
       if len(self.exclude_col)>0:
          print("Features",self.exclude_col, 'excluded.')  
         
-      df = deepcopy(X[selected_col]) 
+      df = deepcopy(X[selected_col].astype(object)) 
       self.df_shape = df.shape  
       self.columns = df.select_dtypes(include='object').columns.tolist()  # use only categorical (including discretized numerical)
       if len(self.columns)!= self.df_shape[1] : 
