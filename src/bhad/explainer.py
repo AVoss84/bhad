@@ -6,8 +6,7 @@ from statsmodels.distributions.empirical_distribution import ECDF
 from sklearn.utils.validation import check_is_fitted
 from copy import deepcopy
 from tqdm.auto import tqdm       # progress bar
-import utils
-from utils import timer 
+from bhad.utils
 
 
 class explainer:
@@ -105,7 +104,7 @@ class explainer:
         return utils.paste(names, values, sep=': ', collapse="\n") 
     
     
-    @timer
+    @utils.timer
     def explain_avf(self, thresholds = None, nof_feat_expl = 5):
         """ 
         Find most infrequent feature realizations based on the AVF output.
