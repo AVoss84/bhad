@@ -59,7 +59,7 @@ class discretize(BaseEstimator, TransformerMixin):
     eps: minimum value of variance of a numeric features (check for 'zero-variance features') 
     make_labels: assign integer labels to bins instead of technical intervals
     """
-    def __init__(self, columns : List[str] = None, nbins : int = None, lower : float = None, k : int = 1, 
+    def __init__(self, columns : List[str] = [], nbins : int = None, lower : float = None, k : int = 1, 
                  round_intervals : int = 5, eps : float = .001, 
                  make_labels : bool = False, 
                  verbose : bool = True, prior_gamma : float = 0.9, prior_max_M : int = 50,  # estimate number of bins M
@@ -80,7 +80,8 @@ class discretize(BaseEstimator, TransformerMixin):
         self.make_labels = make_labels
         
         if self.lower and (self.lower != 0):
-            if self.verbose : warnings.warn("'\nNote: lower != 0 not supported currently, will be set to None!'")
+            if self.verbose : 
+                warnings.warn("'\nNote: lower != 0 not supported currently, will be set to None!'")
             self.lower = None 
     
     def __del__(self):
@@ -110,7 +111,8 @@ class discretize(BaseEstimator, TransformerMixin):
                     # using its Bayesian Maximum A-Posteriori estimate: 
                     #---------------------------------------------------
                     if self.nof_bins is None:
-                        if self.verbose : print("Determining optimal number of bins via MAP estimate")
+                        if self.verbose : 
+                            print("Determining optimal number of bins via MAP estimate")
                         #self.nbins = 1 + ceil(np.log2(len(v)))    # use Sturge's rule for number of bins per variable
                         #self.nbins = freedman_diaconis(v)    # use FD rule
                         #print(f'FD rule: {freedman_diaconis(v)}')
@@ -188,7 +190,7 @@ class discretize(BaseEstimator, TransformerMixin):
             return self
     
     @timer
-    def transform(self, X : pd.DataFrame, y=None)-> pd.DataFrame:
+    def transform(self, X : pd.DataFrame)-> pd.DataFrame:
         
         df_new = deepcopy(X)
         self.cat_columns = df_new.select_dtypes(include='object').columns.tolist()  # categorical (for later reference in postproc.)

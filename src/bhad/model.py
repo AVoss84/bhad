@@ -57,7 +57,7 @@ class BHAD(BaseEstimator, OutlierMixin):
     [1] Vosseler, A. (2021): BHAD: Fast unsupervised anomaly detection using Bayesian histograms, Technical Report
     """
 
-    def __init__(self, contamination : float = 0.01, alpha : float = 1/2, exclude_col : Optional[List[str]] = None, append_score : bool = False, verbose : bool = True):
+    def __init__(self, contamination : float = 0.01, alpha : float = 1/2, exclude_col : Optional[List[str]] = [], append_score : bool = False, verbose : bool = True):
         
         self.contamination = contamination              # outlier proportion in the dataset
         self.alpha = alpha                              # uniform Dirichlet prior concentration parameter used for each feature
@@ -187,14 +187,10 @@ class BHAD(BaseEstimator, OutlierMixin):
             The outlier score of the input samples centered arount threshold 
             value.
         """
-        if self.verbose : print("\nScore input data.\nDiscretize continous features.")
-        # If X == X_train, use discretization from fit, otherwise apply discretization to X 
-        if hasattr(self, 'X_') and X.equals(self.X_): 
-            df = self.Xtilde_
-        else:
-            df = self.disc.transform(X)
-
-        if self.verbose : print("Apply fitted one-hot encoder.")        
+        if self.verbose : 
+            print("\nScore input data.")
+            print("Apply fitted one-hot encoder.")        
+        df = deepcopy(X)    
         self.df_one = self.enc_.transform(df).toarray()     # apply fitted one-hot encoder to categorical -> sparse dummy matrix
         assert all(np.sum(self.df_one, axis=1) == df.shape[1]), 'Row sums must be equal to number of features!!'
         
