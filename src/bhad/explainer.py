@@ -1,22 +1,22 @@
-import os, sys
 import numpy as np
 import pandas as pd
-from math import floor, ceil, isnan
+from math import isnan
 from statsmodels.distributions.empirical_distribution import ECDF
 from sklearn.utils.validation import check_is_fitted
 from copy import deepcopy
 from tqdm.auto import tqdm       # progress bar
-from bhad.utils
+from typing import (List, Optional, Union, Tuple, Type)
+import bhad.utils as utils
 
 
-class explainer:
+class Explainer:
 
-    def __init__(self, avf_obj, discretize_obj, verbose : bool = True):
+    def __init__(self, bhad_obj : Type['BHAD'], discretize_obj : Type['discretize'], verbose : bool = True):
         """
-        Create model explanations per observation/claim using the BAVF
+        Create model explanations per observation/claim using the BHAD
         algorithm as global approximation for the ensemble model.
         Args:
-            avf_obj (sklearn estimator): fitted avf class instance 
+            bhad_obj (sklearn estimator): fitted bhad class instance 
                                          that cointains al relevant attributes
             discretize_obj (sklearn transformer): fitted discretize class instance
             verbose (bool, optional): [description]. Defaults to True.
@@ -24,14 +24,19 @@ class explainer:
 
         # Check if objects are properly fitted sklearn objects:
         #--------------------------------------------------------
-        check_is_fitted(avf_obj) ; check_is_fitted(discretize_obj)
-        if verbose : print('Using fitted BAVF and Discretizer instances.')    
+        check_is_fitted(bhad_obj) ; check_is_fitted(discretize_obj)
+        if verbose : 
+            print('Using fitted BHAD and Discretizer instances.')    
         self.verbose = verbose
-        self.avf = avf_obj
+        self.avf = bhad_obj
         self.disc = discretize_obj
+        assert len(self.avf.numeric_features_ + self.avf.cat_features_) > 0, f'\nAt least one numeric or categorical column has to be specified in {self.avf} explicitly!'
 
     def __del__(self):
         class_name = self.__class__.__name__
+
+    def __repr__(self):
+        return f"Explainer(bhad_obj = {self.avf}, discretize_obj = {self.disc})"
 
     def fit(self):
         self.feature_distr_, self.modes_, self.cdfs_ = self.calc_categorical_margins()
@@ -62,11 +67,12 @@ class explainer:
 
             if isinstance(modes[c], pd._libs.interval.Interval):
                  modes[c] = round(modes[c].mid,2)
-        if self.verbose : print("Marginal cdfs estimated using train set of shape {}".format(df_orig.shape))         
+        if self.verbose : 
+            print("Marginal cdfs estimated using train set of shape {}".format(df_orig.shape))         
         return feat_info, modes, cdfs
     
     
-    def _make_explanation_string(self, names_i, values_i):
+    def _make_explanation_string(self, names_i : List[str], values_i : List[float]):
         
         # Convert techy names to business friendly names in Filtered-MFT xls:
         #----------------------------------------------------------------------
@@ -105,10 +111,10 @@ class explainer:
     
     
     @utils.timer
-    def explain_avf(self, thresholds = None, nof_feat_expl = 5):
+    def explain_bhad(self, thresholds : float = None, nof_feat_expl : int = 5)-> Tuple[pd.DataFrame, str]:
         """ 
-        Find most infrequent feature realizations based on the AVF output.
-        Motivation: the AVF anomaly score is simply the unweighted average of the absolute frequencies
+        Find most infrequent feature realizations based on the BHAD output.
+        Motivation: the BHAD anomaly score is simply the unweighted average of the absolute frequencies
         per feature level (categ. + discretized numerical). Therefore the levels which lead an observation to being
         outlierish are those with (relatively) infrequent counts. 
         
@@ -122,7 +128,8 @@ class explainer:
         df_original + string column vector with feature realisations 
         """
         df_orig = deepcopy(self.disc.df_orig)   # raw data (no preprocessing/binning) to get the original values of features (not the discretized/binned versions)
-        if self.verbose : print("Make explanation for {} observations.".format(df_orig.shape[0])) 
+        if self.verbose : 
+            print("Make explanation for {} observations.".format(df_orig.shape[0])) 
         if thresholds is None:
             self.expl_thresholds = [.2]*self.avf.df_.shape[1]
         else:

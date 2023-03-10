@@ -1,6 +1,6 @@
 from sklearn.base import BaseEstimator, OutlierMixin
 #from sklearn.preprocessing import OneHotEncoder
-from typing import (List, Optional)
+from typing import (List, Optional, Union)
 import numpy as np
 import pandas as pd
 from copy import deepcopy
@@ -57,12 +57,17 @@ class BHAD(BaseEstimator, OutlierMixin):
     [1] Vosseler, A. (2021): BHAD: Fast unsupervised anomaly detection using Bayesian histograms, Technical Report
     """
 
-    def __init__(self, contamination : float = 0.01, alpha : float = 1/2, exclude_col : Optional[List[str]] = [], append_score : bool = False, verbose : bool = True):
+    def __init__(self, contamination : float = 0.01, alpha : float = 1/2, exclude_col : Optional[List[str]] = [], 
+                 numeric_features : Optional[List[str]] = [], 
+                 cat_features : Optional[List[str]] = [],
+                 append_score : bool = False, verbose : bool = True):
         
         self.contamination = contamination              # outlier proportion in the dataset
         self.alpha = alpha                              # uniform Dirichlet prior concentration parameter used for each feature
         self.verbose = verbose
         self.append_score = append_score
+        self.numeric_features = numeric_features
+        self.cat_features = cat_features 
         self.exclude_col = exclude_col               # list with column names in X of columns to exclude for computation of the score
         if self.verbose : 
             print("\n-- Bayesian Histogram-based Anomaly Detector (BHAD) --\n")
@@ -72,8 +77,9 @@ class BHAD(BaseEstimator, OutlierMixin):
         class_name = self.__class__.__name__
 
     def __repr__(self):
-        return f"BHAD(contamination = {self.contamination}, alpha = {self.alpha})"
+        return f"BHAD(contamination = {self.contamination}, alpha = {self.alpha}, exclude_col = {self.exclude_col}, numeric_features = {self.numeric_features}, cat_features = {self.cat_features}, append_score = {self.append_score}, verbose = {self.verbose})"
     
+
     def _fast_bhad(self, X : pd.DataFrame)-> pd.DataFrame:
       """
       Input:
@@ -134,7 +140,7 @@ class BHAD(BaseEstimator, OutlierMixin):
       return out    
     
 
-    def fit(self, X : pd.DataFrame, y=None)-> 'BHAD':
+    def fit(self, X : pd.DataFrame, y : Union[np.array, pd.Series] = None)-> 'BHAD':
         """
         Apply the BHAD and calculate the outlier threshold value.
 
@@ -166,7 +172,8 @@ class BHAD(BaseEstimator, OutlierMixin):
         self.X_ = X
         self.xindex_fitted_, self.df_, self.scores_, self.freq_ = self.X_.index, self.df, self.scores, self.freq          
         self.enc_, self.df_one_, self.f_mat_ = self.enc, self.df_one, self.f_mat
-        del self.df_one, self.f_mat, self.freq, self.df
+        self.numeric_features_ = self.numeric_features
+        self.cat_features_ = self.cat_features 
         return self
 
     

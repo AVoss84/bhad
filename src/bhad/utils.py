@@ -33,6 +33,16 @@ def timer(func):
     return wrapper_timer
 
 
+#---------------------------------------------
+def reduce_concat(x, sep : str = ""):
+    return functools.reduce(lambda x, y: str(x) + sep + str(y), x)
+
+def paste(*lists, sep : str = " ", collapse : str = None):
+    result = map(lambda x: reduce_concat(x, sep=sep), zip(*lists))
+    if collapse is not None:
+        return reduce_concat(result, sep=collapse)
+    return list(result)
+#----------------------------------------------------
 
 def jitter(M: int, noise_scale: float = 10**5., seed : int = None)-> np.array:
 
@@ -102,7 +112,7 @@ class discretize(BaseEstimator, TransformerMixin):
                  print(f"Used {len(self.columns)} numeric feature(s) and {len(self.cat_columns)} categorical feature(s).")       
             df_new[self.columns] = df_new[self.columns].astype(float)        
             ptive_inf = float ('inf') ; ntive_inf = float('-inf')
-            #self.df_orig = deepcopy(df_new[self.columns + self.cat_columns])   # train data with non-discretized values for numeric features for model explainer
+            self.df_orig = deepcopy(df_new[self.columns + self.cat_columns])   # train data with non-discretized values for numeric features for model explainer
 
             for col in self.columns:
                     v = df_new[col].values       # values of feature col
@@ -184,7 +194,7 @@ class discretize(BaseEstimator, TransformerMixin):
             self.k_ = self.k 
             self.eps_ = self.eps 
             self.make_labels_ = self.make_labels 
-            #self.df_orig_ = deepcopy(self.df_orig)
+            self.df_orig_ = deepcopy(self.df_orig)
             if self.verbose and (self.nof_bins is not None): 
                 print("Binned continous features into", self.nbins,"bins.")
             return self
@@ -197,11 +207,12 @@ class discretize(BaseEstimator, TransformerMixin):
         x_columns = df_new.select_dtypes(include=[np.number]).columns.tolist()    # numeric features only
 
         # Check if columns in X and X_train are compatible:
-        for col in x_columns : assert col in self.columns_, 'Column {} not among loaded X_train columns!'.format(col)
+        for col in x_columns : 
+            assert col in self.columns_, 'Column {} not among loaded X_train columns!'.format(col)
         df_new[self.columns_] = df_new[self.columns_].astype(float)   
 
         # Update & Keep for model explainer
-        #self.df_orig = deepcopy(df_new[self.columns_ + self.cat_columns])  
+        self.df_orig = deepcopy(df_new[self.columns_ + self.cat_columns])  
 
         # if you already have it from fit then just output it
         if hasattr(self, 'X_') and (len(self.xindex_fitted_) == X.shape[0]):
