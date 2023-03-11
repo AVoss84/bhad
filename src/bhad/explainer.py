@@ -123,7 +123,8 @@ class Explainer:
                     values.append(val)
                 else:
                     print(name,"neither numeric nor categorical!")
-        return utils.paste(names, values, sep=': ', collapse="\n") 
+        expl_string = utils.paste(names, values, sep=': ', collapse="\n")             
+        return expl_string
     
     
     @utils.timer
@@ -178,7 +179,7 @@ class Explainer:
 
         # Over all observation (rows) in df:
         #--------------------------------------
-        for obs in tqdm(range(n)):
+        for obs in tqdm(range(n)):          # assumes df_orig having index of 0...n-1
             names_i = orig_names[obs, df_filter_twist[obs,:]].tolist()
             values_i = df_orig_twist[obs, df_filter_twist[obs,:]].tolist()
             assert len(names_i) == len(values_i), 'Lengths of lists names_i and values_i do not match!'

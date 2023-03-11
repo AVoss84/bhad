@@ -62,6 +62,7 @@ class BHAD(BaseEstimator, OutlierMixin):
                  cat_features : Optional[List[str]] = [],
                  append_score : bool = False, verbose : bool = True):
         
+        super(BHAD, self).__init__()
         self.contamination = contamination              # outlier proportion in the dataset
         self.alpha = alpha                              # uniform Dirichlet prior concentration parameter used for each feature
         self.verbose = verbose
@@ -71,7 +72,7 @@ class BHAD(BaseEstimator, OutlierMixin):
         self.exclude_col = exclude_col               # list with column names in X of columns to exclude for computation of the score
         if self.verbose : 
             print("\n-- Bayesian Histogram-based Anomaly Detector (BHAD) --\n")
-        super(BHAD, self).__init__()
+        
 
     def __del__(self):
         class_name = self.__class__.__name__
@@ -155,12 +156,14 @@ class BHAD(BaseEstimator, OutlierMixin):
         Returns
         -------
         self : BHAD object
-        """
+        """                
         # Fit model: 
         #------------
         if self.verbose : 
             print("Fit BHAD on discretized data.")
+        
         self.scores = self._fast_bhad(X)
+
         if self.append_score:  
             self.threshold_ = np.nanpercentile(self.scores['outlier_score'].tolist(), q=100*self.contamination)
         else: 

@@ -34,16 +34,28 @@ dataset.info(verbose=True)
 dataset.select_dtypes(include=['float64'])
 dataset.select_dtypes(include=['object'])
 
+
+from sklearn.model_selection import train_test_split
+
+X_train, X_test, y_train, y_test = train_test_split(dataset, y_true, test_size=0.33, random_state=42)
+
+
+print(X_train.shape)
+print(X_test.shape)
+
+print(np.unique(y_train, return_counts=True))
+print(np.unique(y_test, return_counts=True))
+
 #------------------------------------------------
 
-from sklearn.pipeline import Pipeline
+# from sklearn.pipeline import Pipeline
 
 
-x_trans = discretize(nbins = 20).fit_transform(dataset)
+# x_trans = discretize(nbins = 20).fit_transform(dataset)
 
-x_trans.head()
+# x_trans.head()
 
-x_trans.info(verbose=True)
+# x_trans.info(verbose=True)
 
 # x_train = np.array([["A1","B1","C1"],["A2","B1","C2"]])
 # x_test = np.array([["A1","B2","C2"]]) # As you can see, "B2" is a new attribute for column B
@@ -87,38 +99,44 @@ x_trans.info(verbose=True)
 
 # bh.fit(x_trans)
 
-dataset.dtypes
+#dataset.dtypes
 
 #reload(bhad)
 
 from sklearn.pipeline import Pipeline
 
-num = list(dataset.columns)
+#num = list(dataset.columns)
 # num.remove('var30')
-num
+
+
+from sklearn.pipeline import Pipeline
 
 pipe = Pipeline(steps=[
-    ('discrete' , discretize(nbins = None, verbose = False)),      # step only needed if continous features are present
-    #('model', BHAD(contamination = 0.01, numeric_features = num, cat_features=['var30']))
-    ('model', BHAD(contamination = 0.01, numeric_features = num))
+    ('discrete' , discretize(nbins = None, verbose = False)),     
+    ('model', BHAD(contamination = 0.01, numeric_features = list(X_train.columns)))
 ])
 
-pipe.fit(dataset)
+pipe.fit(X_train)
+
 
 #scores_train = pipe.decision_function(dataset)
 #y_pred = pipe.fit_predict(dataset)     
 
-disc = pipe.named_steps['discrete']
-model = pipe.named_steps['model']
 
-model.columns_onehot_ 
 
-ex = expl.Explainer(model, disc)
+from bhad import explainer
 
-ex.fit()
+reload(explainer)
 
-df_orig, expl_thresholds = ex.explain_bhad()
+local_expl = explainer.Explainer(pipe.named_steps['model'], pipe.named_steps['discrete'])
 
-for obs, i in enumerate(df_orig.explanation.values):
-    print('\nObs.:', obs, i)
+expl = local_expl.fit()
+
+df_orig, expl_thresholds = local_expl.explain_bhad()
+
+df_orig.shape
+
+for obs, ex in enumerate(df_orig.explanation.values):
+    if (obs % 1000) == 0:
+        print(f'\nObs. {obs}:\n', ex)
 
