@@ -1,5 +1,7 @@
 import numpy as np
 import pandas as pd
+from pandas.api.types import is_string_dtype
+from pandas.api.types import is_numeric_dtype
 from math import isnan
 from collections import defaultdict
 from statsmodels.distributions.empirical_distribution import ECDF
@@ -52,18 +54,20 @@ class Explainer:
         df_original : dataframe incl. numeric features with original values before discretization;
                       will be used to estimate c.d.f. of continous feature
         """
-        df_orig = deepcopy(self.disc.df_orig_)
+        df_orig = deepcopy(self.disc.df_orig_)     # train set
         cols = df_orig.columns
 
         # Compute margins for each feature:
         #-------------------------------------
         feat_info, modes, cdfs = dict(), dict(), dict()
         for c in cols:    
-            cdfs[c] = ECDF(df_orig[c].tolist())
+            #print(f'Column {c} is non-numeric: {is_string_dtype(df_orig[c])}')
+            
+            cdfs[c] = ECDF(df_orig[c].tolist())   # fit empirical cdf to the non-discretized numeric orig. values
             val_index = self.avf.enc_.dummy_names_index[c]
             counts = pd.DataFrame(self.avf.freq_[val_index], index=self.avf.enc_.dummy_names_by_feat[c], columns = ['pmf'])
-            pmfs = counts/np.sum(counts['pmf'].values)         # rel. freq.
-            feat_info[c] = pmfs
+            pmfs = counts/np.sum(counts['pmf'].values)         # rel. freq./estimate pmf
+            feat_info[c] = pmfs                                # per feature, i.e. column
             single = feat_info.get(c).pmf           
             modes[c] = single.idxmax(axis=0, skipna=True)      # take argmax to get the x.value of the mode
 
@@ -91,6 +95,7 @@ class Explainer:
         names, values = [], []
         for name, val in zip(names_i, values_i):   
                 # Numeric features: 
+                #-------------------
                 if name in self.avf.numeric_features_:
                     # filter out individual numeric values with NaNs from individual explanation
                     if isinstance(val, (int, float)) and ~(isnan(val) | np.isnan(val)):
@@ -103,6 +108,7 @@ class Explainer:
                             names.append(name+' (Cumul.perc.: '+str(round(ecdf(val),2))+')')
                         values.append(str(round(val,2)))
                 # Categorical features: 
+                #-----------------------
                 elif name in self.avf.cat_features_:
                     search_index = np.array(self.feature_distr_[name].index.tolist())
                     comp = str(val) == search_index
@@ -137,6 +143,7 @@ class Explainer:
         --------
         df_original + string column vector with feature realisations 
         """
+        assert hasattr(self, 'feature_distr_'), 'Fit explainer first!'
         df_orig = deepcopy(self.disc.df_orig)   # raw data (no preprocessing/binning) to get the original values of features (not the discretized/binned versions)
         if self.verbose : 
             print("Make explanation for {} observations.".format(df_orig.shape[0])) 
