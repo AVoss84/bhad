@@ -315,6 +315,7 @@ def bart_simpson_density(x : np.array, m : int = 4)-> np.array:
     """
     Calculate density of Bart Simpson distr. aka The Claw
     (see Larry Wasserman, All of nonparametric statistics, section 6)
+    m: number of mixture components 
     """
     mix = 0
     for j in range(m+1):
@@ -335,7 +336,8 @@ def rbartsim(MCsim : int = 10**4, seed : int = None, verbose : bool = True):
     Sample from Bart Simpson density via Accept-Reject algorithm, 
     see for example Robert, Casella
     """
-    if seed: np.random.seed(seed) 
+    if seed: 
+        np.random.seed(seed) 
     result = minimize_scalar(lambda t: -accratio(t))    # maximize function
     M = -result.fun 
     u = np.random.uniform(0,1,size=MCsim)

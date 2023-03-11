@@ -27,7 +27,8 @@ class Explainer:
         #--------------------------------------------------------
         check_is_fitted(bhad_obj) ; check_is_fitted(discretize_obj)
         if verbose : 
-            print('Using fitted BHAD and Discretizer instances.')    
+            print("--- BHAD Model Explainer ---\n")
+            print('Using fitted BHAD and fitted discretizer.')    
         self.verbose = verbose
         self.avf = bhad_obj
         self.disc = discretize_obj
@@ -39,11 +40,11 @@ class Explainer:
     def __repr__(self):
         return f"Explainer(bhad_obj = {self.avf}, discretize_obj = {self.disc})"
 
-    def fit(self):
-        self.feature_distr_, self.modes_, self.cdfs_ = self.calc_categorical_margins()
+    def fit(self)-> 'Explainer':
+        self.feature_distr_, self.modes_, self.cdfs_ = self.calculate_margins()
         return self
 
-    def calc_categorical_margins(self)-> Tuple[dict, dict, dict]:
+    def calculate_margins(self)-> Tuple[dict, dict, dict]:
         """
         Calculate marginal frequency distr. and empirical cdfs per feature, 
         used in model explanation. df_orig must be the train set.
@@ -89,8 +90,9 @@ class Explainer:
         tec2biz = defaultdict(str, {names: names for names in self.disc.df_orig_.columns})     # here both are the same; but can be easily modified    
         names, values = [], []
         for name, val in zip(names_i, values_i):   
-            #if ~(isnan(val) | np.isnan(val)):     # filter out individual numeric values with NaNs from individual explanation
+                # Numeric features: 
                 if name in self.avf.numeric_features_:
+                    # filter out individual numeric values with NaNs from individual explanation
                     if isinstance(val, (int, float)) and ~(isnan(val) | np.isnan(val)):
                         ecdf = self.cdfs_[name]   
                         # Evaluate 1D estimated cdf step function:
@@ -100,7 +102,7 @@ class Explainer:
                             print(ex)
                             names.append(name+' (Cumul.perc.: '+str(round(ecdf(val),2))+')')
                         values.append(str(round(val,2)))
-
+                # Categorical features: 
                 elif name in self.avf.cat_features_:
                     search_index = np.array(self.feature_distr_[name].index.tolist())
                     comp = str(val) == search_index
@@ -160,8 +162,7 @@ class Explainer:
         #----------------------------------------------------------
         for z, col in enumerate(cols):
             if not any(df_relfreq[col].values <= self.expl_thresholds[z]):
-                self.expl_thresholds[z] = min(min(df_relfreq[col].values),.8)    # to exclude minima = 1.0 (-> cannot be outliers!)     
-
+                self.expl_thresholds[z] = min(min(df_relfreq[col].values),.8)    # to exclude minima = 1.0 (-> cannot be outliers!)   
             df_filter[:,z] = df_relfreq[col].values <= self.expl_thresholds[z]   
 
         df_filter_twist = df_filter[i,j]
