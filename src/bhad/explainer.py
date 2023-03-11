@@ -43,14 +43,18 @@ class Explainer:
         return f"Explainer(bhad_obj = {self.avf}, discretize_obj = {self.disc})"
 
     def fit(self)-> 'Explainer':
-        self.feature_distr_, self.modes_, self.cdfs_ = self.calculate_margins()
+        self.feature_distr_, self.modes_, self.cdfs_ = self.calculate_references()
         return self
 
-    def calculate_margins(self)-> Tuple[dict, dict, dict]:
+    def calculate_references(self)-> Tuple[dict, dict, dict]:
         """
         Calculate marginal frequency distr. and empirical cdfs per feature, 
         used in model explanation. df_orig must be the train set.
+        This will be shown in the explanation as a reference why an obseravtion
+        may be anomalous compared to its empirical distribution
+        
         Input:
+        ------
         df_original : dataframe incl. numeric features with original values before discretization;
                       will be used to estimate c.d.f. of continous feature
         """
@@ -61,8 +65,8 @@ class Explainer:
         #-------------------------------------
         feat_info, modes, cdfs = dict(), dict(), dict()
         for c in cols:    
-            print(f'Column {c} is non-numeric: {is_string_dtype(df_orig[c])}')
-
+            #print(f'Column {c} is non-numeric: {is_string_dtype(df_orig[c])}')
+             
             cdfs[c] = ECDF(df_orig[c].tolist())   # fit empirical cdf to the non-discretized numeric orig. values
             val_index = self.avf.enc_.dummy_names_index[c]
             counts = pd.DataFrame(self.avf.freq_[val_index], index=self.avf.enc_.dummy_names_by_feat[c], columns = ['pmf'])
@@ -133,7 +137,7 @@ class Explainer:
         Find most infrequent feature realizations based on the BHAD output.
         Motivation: the BHAD anomaly score is simply the unweighted average of the absolute frequencies
         per feature level (categ. + discretized numerical). Therefore the levels which lead an observation to being
-        outlierish are those with (relatively) infrequent counts. 
+        outlierish are those with (relatively) infrequent counts.
         
         Parameters
         ----------
@@ -165,12 +169,18 @@ class Explainer:
         df_relfreq = nz/n_                  # relative marginal frequencies
         df_filter = np.zeros(list(df_relfreq.shape), dtype=bool)      # initialize
         cols = df_relfreq.columns             # all columns
-        
-        # Identify outliers, with relative frequ. below threshold
-        #----------------------------------------------------------
+        #--------------------------------------------------------------------------
+        # 'Identify' outliers, with relative frequ. below threshold
+        # (=decision rule)
+        # Note: smallest (here) 5 features do not have necessrialy anomlous values
+        # Once identified we calculate a baseline/reference for the user
+        # for numeric: use the ECDF; for categorical: mode of the pmf 
+        # (see calculate_references() fct above)
+        #--------------------------------------------------------------------------
         for z, col in enumerate(cols):
             if not any(df_relfreq[col].values <= self.expl_thresholds[z]):
                 self.expl_thresholds[z] = min(min(df_relfreq[col].values),.8)    # to exclude minima = 1.0 (-> cannot be outliers!)   
+            
             df_filter[:,z] = df_relfreq[col].values <= self.expl_thresholds[z]   
 
         df_filter_twist = df_filter[i,j]
