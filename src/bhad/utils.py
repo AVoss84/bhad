@@ -106,9 +106,10 @@ class discretize(BaseEstimator, TransformerMixin):
     def fit(self, X : pd.DataFrame)-> 'discretize':
         
             assert isinstance(X, pd.DataFrame), 'Input X must be pandas dataframe!'
-            if self.verbose: 
-                print("Reseting index of input dataframe.")
-            X.reset_index(drop=True, inplace=True)     # Need this to conform with 0...n-1 index in explainer and elsewhere 
+            if X.index[0] != 0:    
+                X.reset_index(drop=True, inplace=True)     # Need this to conform with 0...n-1 index in explainer and elsewhere 
+                if self.verbose: 
+                    print("Reseting index of input dataframe.")    
             df_new = deepcopy(X)
             self.nbins = self.nof_bins    # initialize (might be changed in case of low variance features) 
             self.cat_columns = df_new.select_dtypes(include='object').columns.tolist()  # categorical (for later reference in postproc.)
@@ -209,6 +210,11 @@ class discretize(BaseEstimator, TransformerMixin):
     @timer
     def transform(self, X : pd.DataFrame)-> pd.DataFrame:
         
+        if X.index[0] != 0:    
+            X.reset_index(drop=True, inplace=True)     # Need this to conform with 0...n-1 index in explainer and elsewhere 
+            if self.verbose: 
+               print("Reseting index of input dataframe.")    
+
         df_new = deepcopy(X)
         self.cat_columns = df_new.select_dtypes(include='object').columns.tolist()  # categorical (for later reference in postproc.)
         x_columns = df_new.select_dtypes(include=[np.number]).columns.tolist()    # numeric features only
