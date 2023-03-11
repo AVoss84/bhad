@@ -61,8 +61,8 @@ class Explainer:
         #-------------------------------------
         feat_info, modes, cdfs = dict(), dict(), dict()
         for c in cols:    
-            #print(f'Column {c} is non-numeric: {is_string_dtype(df_orig[c])}')
-            
+            print(f'Column {c} is non-numeric: {is_string_dtype(df_orig[c])}')
+
             cdfs[c] = ECDF(df_orig[c].tolist())   # fit empirical cdf to the non-discretized numeric orig. values
             val_index = self.avf.enc_.dummy_names_index[c]
             counts = pd.DataFrame(self.avf.freq_[val_index], index=self.avf.enc_.dummy_names_by_feat[c], columns = ['pmf'])
@@ -79,8 +79,9 @@ class Explainer:
     
     
     def _make_explanation_string(self, names_i : List[str], values_i : List[float])-> List[str]:
-        """Create local explanation as a string with most relevant features per obseravtion. 
-           State their relative position in the respective marginal density/mass function.
+        """
+        Create local explanation as a string with most relevant features per obseravtion. 
+        State their relative position in the respective marginal density/mass function.
 
         Args:
             names_i (List[str]): _description_
@@ -123,8 +124,7 @@ class Explainer:
                     values.append(val)
                 else:
                     print(name,"neither numeric nor categorical!")
-        expl_string = utils.paste(names, values, sep=': ', collapse="\n")             
-        return expl_string
+        return utils.paste(names, values, sep=': ', collapse="\n") 
     
     
     @utils.timer
@@ -179,7 +179,7 @@ class Explainer:
 
         # Over all observation (rows) in df:
         #--------------------------------------
-        for obs in tqdm(range(n)):          # assumes df_orig having index of 0...n-1
+        for obs in tqdm(range(n)):
             names_i = orig_names[obs, df_filter_twist[obs,:]].tolist()
             values_i = df_orig_twist[obs, df_filter_twist[obs,:]].tolist()
             assert len(names_i) == len(values_i), 'Lengths of lists names_i and values_i do not match!'
