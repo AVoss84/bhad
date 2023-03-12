@@ -19,10 +19,14 @@ pip install -e src
 from sklearn.pipeline import Pipeline
 from bhad.utils import discretize
 from bhad.model import BHAD
+from bhad.explainer import Explainer
+
+numeric_cols = list(dataset.select_dtypes(include=['float', 'int']).columns)     # numeric feature names 
+cat_cols = list(dataset.select_dtypes(include=['object', 'category']).columns)   # categorical feature names
 
 pipe = Pipeline(steps=[
     ('discrete', discretize(nbins = None)),   # discretize continous features + model selection
-    ('model', BHAD(contamination = 0.01))     
+    ('model', BHAD(contamination = 0.01, numeric_features = numeric_cols, cat_features = cat_cols))
 ])
 ```
 
@@ -30,5 +34,14 @@ For a given dataset:
 
 ```python
 y_pred = pipe.fit_predict(X = dataset)        
-scores = pipe.decision_function(X = dataset)  # obtain anomaly scores
 ```
+
+Get local model explanations, i.e. for each observation:
+
+```python
+local_expl = Explainer(pipe.named_steps['model'], pipe.named_steps['discrete']).fit()
+
+df_train = local_expl.get_explanation()
+```
+
+

@@ -133,7 +133,7 @@ class Explainer:
     
     
     @utils.timer
-    def get_explanation(self, thresholds : float = None, nof_feat_expl : int = 5)-> Tuple[pd.DataFrame, str]:
+    def get_explanation(self, thresholds : float = None, nof_feat_expl : int = 5)-> pd.DataFrame:
         """ 
         Find most infrequent feature realizations based on the BHAD output.
         Motivation: the BHAD anomaly score is simply the unweighted average of the absolute frequencies
@@ -147,7 +147,7 @@ class Explainer:
         
         Returns:
         --------
-        df_original + string column vector with feature realisations 
+        df_original + string column vector with feature realisations
         """
         assert hasattr(self, 'feature_distr_'), 'Fit explainer first!'
         df_orig = deepcopy(self.disc.df_orig[self.avf.df_.columns])   # raw data (no preprocessing/binning) to get the original values of features (not the discretized/binned versions)
@@ -204,4 +204,4 @@ class Explainer:
                df_orig.loc[obs, 'explanation'] = self._make_explanation_string(names_i, values_i)  
             else:   
                df_orig.loc[obs, 'explanation'] = None   
-        return  df_orig, self.expl_thresholds
+        return  df_orig
