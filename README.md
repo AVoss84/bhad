@@ -21,12 +21,12 @@ from bhad.utils import discretize
 from bhad.model import BHAD
 from bhad.explainer import Explainer
 
-numeric_cols = list(dataset.select_dtypes(include=['float', 'int']).columns)     # numeric feature names 
-cat_cols = list(dataset.select_dtypes(include=['object', 'category']).columns)   # categorical feature names
+numeric_cols = [....]
+categorical_cols = [....]
 
 pipe = Pipeline(steps=[
     ('discrete', discretize(nbins = None)),   # discretize continous features + model selection
-    ('model', BHAD(contamination = 0.01, numeric_features = numeric_cols, cat_features = cat_cols))
+    ('model', BHAD(contamination = 0.01, numeric_features = numeric_cols, cat_features = categorical_cols))
 ])
 ```
 
