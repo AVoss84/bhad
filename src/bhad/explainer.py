@@ -1,16 +1,16 @@
+from collections import defaultdict
+from typing import (List, Tuple, Type)
+from math import isnan
+from copy import deepcopy
 import numpy as np
 import pandas as pd
-from pandas.api.types import is_string_dtype
-from pandas.api.types import is_numeric_dtype
-from math import isnan
-from collections import defaultdict
+#from pandas.api.types import (is_string_dtype, is_numeric_dtype)
 from statsmodels.distributions.empirical_distribution import ECDF
 from sklearn.utils.validation import check_is_fitted
-from copy import deepcopy
 from tqdm.auto import tqdm       
-from typing import (List, Optional, Union, Tuple, Type)
 import bhad.utils as utils
-
+from bhad.model import BHAD
+from bhad.utils import discretize
 
 class Explainer:
 
@@ -66,7 +66,6 @@ class Explainer:
         feat_info, modes, cdfs = dict(), dict(), dict()
         for c in cols:    
             #print(f'Column {c} is non-numeric: {is_string_dtype(df_orig[c])}')
-             
             cdfs[c] = ECDF(df_orig[c].tolist())   # fit empirical cdf to the non-discretized numeric orig. values
             val_index = self.avf.enc_.dummy_names_index[c]
             counts = pd.DataFrame(self.avf.freq_[val_index], index=self.avf.enc_.dummy_names_by_feat[c], columns = ['pmf'])
@@ -98,7 +97,8 @@ class Explainer:
         #---------------------------------------------------
         tec2biz = defaultdict(str, {names: names for names in self.disc.df_orig_.columns})     # here both are the same; but can be easily modified    
         names, values = [], []
-        for name, val in zip(names_i, values_i):   
+        for name, val in zip(names_i, values_i):  
+
                 # Numeric features: 
                 #-------------------
                 if name in self.avf.numeric_features_:
@@ -112,6 +112,7 @@ class Explainer:
                             print(ex)
                             names.append(name+' (Cumul.perc.: '+str(round(ecdf(val),2))+')')
                         values.append(str(round(val,2)))
+                        
                 # Categorical features: 
                 #-----------------------
                 elif name in self.avf.cat_features_:
@@ -132,7 +133,7 @@ class Explainer:
     
     
     @utils.timer
-    def explain_bhad(self, thresholds : float = None, nof_feat_expl : int = 5)-> Tuple[pd.DataFrame, str]:
+    def get_explanation(self, thresholds : float = None, nof_feat_expl : int = 5)-> Tuple[pd.DataFrame, str]:
         """ 
         Find most infrequent feature realizations based on the BHAD output.
         Motivation: the BHAD anomaly score is simply the unweighted average of the absolute frequencies
@@ -149,48 +150,49 @@ class Explainer:
         df_original + string column vector with feature realisations 
         """
         assert hasattr(self, 'feature_distr_'), 'Fit explainer first!'
-        df_orig = deepcopy(self.disc.df_orig)   # raw data (no preprocessing/binning) to get the original values of features (not the discretized/binned versions)
+        df_orig = deepcopy(self.disc.df_orig[self.avf.df_.columns])   # raw data (no preprocessing/binning) to get the original values of features (not the discretized/binned versions)
         if self.verbose : 
-            print("Make explanation for {} observations.".format(df_orig.shape[0])) 
+            print("Create local explanations for {} observations.".format(df_orig.shape[0])) 
         if thresholds is None:
             self.expl_thresholds = [.2]*self.avf.df_.shape[1]
         else:
             self.expl_thresholds = thresholds
             
         n = self.avf.f_mat.shape[0]          # sample size current sample
-        n_ = self.avf.f_mat_.shape[0]        # sample size train set; used to convert to rel. frequ.
+        n_ = self.avf.f_mat_.shape[0]        # sample size train set; used to convert to rel. freq.
         index_row, index_col = np.nonzero(self.avf.f_mat) 
         nz_freq = self.avf.f_mat[index_row, index_col].reshape(n,-1)          # non-zero frequencies
         ac = np.array(self.avf.df_.columns.tolist())         # feature names
         names = np.tile(ac, (n, 1))
         i = np.arange(len(nz_freq))[:, np.newaxis]          # set new x-axis 
-        j = np.argsort(nz_freq, axis=1)                  # sort freq. per row and return indices
+        j = np.argsort(nz_freq, axis=1)                            # sort freq. per row and return indices
         nz = pd.DataFrame(nz_freq, columns = self.avf.df_.columns)   # absolute frequencies/counts
-        df_relfreq = nz/n_                  # relative marginal frequencies
-        df_filter = np.zeros(list(df_relfreq.shape), dtype=bool)      # initialize
-        cols = df_relfreq.columns             # all columns
+        df_relfreq = nz/n_                                          # relative marginal frequencies
+        df_filter = np.zeros(list(df_relfreq.shape), dtype=bool)      # initialize; take only 'significantly' anomalous values
+        cols = list(df_relfreq.columns)             # all column names
         #--------------------------------------------------------------------------
-        # 'Identify' outliers, with relative frequ. below threshold
+        # 'Identify' outliers, with relative freq. below threshold
         # (=decision rule)
-        # Note: smallest (here) 5 features do not have necessrialy anomlous values
+        # Note: smallest (here) 5 features do not necesserily need to have anomalous values
         # Once identified we calculate a baseline/reference for the user
         # for numeric: use the ECDF; for categorical: mode of the pmf 
         # (see calculate_references() fct above)
         #--------------------------------------------------------------------------
         for z, col in enumerate(cols):
+            # to handle distr. with few categories
             if not any(df_relfreq[col].values <= self.expl_thresholds[z]):
                 self.expl_thresholds[z] = min(min(df_relfreq[col].values),.8)    # to exclude minima = 1.0 (-> cannot be outliers!)   
             
             df_filter[:,z] = df_relfreq[col].values <= self.expl_thresholds[z]   
 
-        df_filter_twist = df_filter[i,j]
-        df_orig_twist = df_orig.values[i,j]
-        orig_names = names[i,j]
+        df_filter_twist = df_filter[i,j]      # sorted filter of 'relevance'
+        df_orig_twist = df_orig.values[i,j]  # sorted orig. values
+        orig_names_twist = names[i,j]            # sorted names
 
         # Over all observation (rows) in df:
         #--------------------------------------
         for obs in tqdm(range(n)):
-            names_i = orig_names[obs, df_filter_twist[obs,:]].tolist()
+            names_i = orig_names_twist[obs, df_filter_twist[obs,:]].tolist()
             values_i = df_orig_twist[obs, df_filter_twist[obs,:]].tolist()
             assert len(names_i) == len(values_i), 'Lengths of lists names_i and values_i do not match!'
             values_str = list(map(str, values_i))

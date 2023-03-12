@@ -1,10 +1,10 @@
-from sklearn.base import BaseEstimator, OutlierMixin
-#from sklearn.preprocessing import OneHotEncoder
 from typing import (List, Optional, Union)
-import numpy as np
-import pandas as pd
 from copy import deepcopy
 import warnings
+import pandas as pd
+import numpy as np
+from sklearn.base import BaseEstimator, OutlierMixin
+#from sklearn.preprocessing import OneHotEncoder
 import bhad.utils as utils
 
 class BHAD(BaseEstimator, OutlierMixin):
@@ -58,9 +58,8 @@ class BHAD(BaseEstimator, OutlierMixin):
     """
 
     def __init__(self, contamination : float = 0.01, alpha : float = 1/2, exclude_col : Optional[List[str]] = [], 
-                 numeric_features : Optional[List[str]] = [], 
-                 cat_features : Optional[List[str]] = [],
-                 append_score : bool = False, verbose : bool = True):
+                    numeric_features : Optional[List[str]] = [], cat_features : Optional[List[str]] = [],
+                    append_score : bool = False, verbose : bool = True):
         
         super(BHAD, self).__init__()
         self.contamination = contamination              # outlier proportion in the dataset
@@ -92,13 +91,13 @@ class BHAD(BaseEstimator, OutlierMixin):
       assert isinstance(X, pd.DataFrame), 'X must be of type pd.DataFrame'
       selected_col = X.columns[~X.columns.isin(self.exclude_col)] 
       if len(self.exclude_col)>0:
-         print("Features",self.exclude_col, 'excluded.')  
+            print("Features",self.exclude_col, 'excluded.')  
         
       df = deepcopy(X[selected_col].astype(object)) 
       self.df_shape = df.shape  
-      self.columns = df.select_dtypes(include='object').columns.tolist()  # use only categorical (including discretized numerical)
+      self.columns = df.select_dtypes(include=['object', 'category']).columns.tolist()  # use only categorical (including discretized numerical)
       if len(self.columns)!= self.df_shape[1] : 
-        warnings.warn('Not all features in X are categorical!!')
+            warnings.warn('Not all features in X are categorical!!')
       self.df = df
       unique_categories_ = [df[var].unique().tolist() + ['infrequent'] for var in df.columns]
       
@@ -130,12 +129,12 @@ class BHAD(BaseEstimator, OutlierMixin):
       # Assign each obs. the overall category count
       #-------------------------------------------------------------------
       self.f_mat = self.df_one * np.array(a)              # keep only nonzero matrix entries
-      f_mat_bayes = self.df_one * np.array(a_bayes)
+      self.f_mat_bayes = self.df_one * np.array(a_bayes)
 
       # Calculate outlier score for each row (observation), 
       # see equation (5) in [1]
       #-----------------------------------------------------
-      out = pd.Series(np.apply_along_axis(np.sum, 1, f_mat_bayes), index=df.index)    
+      out = pd.Series(np.apply_along_axis(np.sum, 1, self.f_mat_bayes), index=df.index)    
       if self.append_score:  
          out = pd.concat([df, pd.DataFrame(out, columns = ['outlier_score'])], axis=1)
       return out    
@@ -161,6 +160,7 @@ class BHAD(BaseEstimator, OutlierMixin):
         #------------
         if self.verbose : 
             print("Fit BHAD on discretized data.")
+            print(f"Input shape: {X.shape}")
         
         self.scores = self._fast_bhad(X)
 
@@ -168,15 +168,15 @@ class BHAD(BaseEstimator, OutlierMixin):
             self.threshold_ = np.nanpercentile(self.scores['outlier_score'].tolist(), q=100*self.contamination)
         else: 
             self.threshold_ = np.nanpercentile(self.scores.tolist(), q=100*self.contamination)
-        if self.verbose : print("Finished training.")
+        if self.verbose : 
+            print("Finished training.")
         
         # Tag as fitted for sklearn compatibility: 
         # https://scikit-learn.org/stable/developers/develop.html#estimated-attributes
         self.X_ = X
         self.xindex_fitted_, self.df_, self.scores_, self.freq_ = self.X_.index, self.df, self.scores, self.freq          
-        self.enc_, self.df_one_, self.f_mat_ = self.enc, self.df_one, self.f_mat
-        self.numeric_features_ = self.numeric_features
-        self.cat_features_ = self.cat_features 
+        self.enc_, self.df_one_, self.f_mat_, self.f_mat_bayes_ = self.enc, self.df_one, self.f_mat, self.f_mat_bayes
+        self.numeric_features_, self.cat_features_ = self.numeric_features, self.cat_features
         return self
 
     

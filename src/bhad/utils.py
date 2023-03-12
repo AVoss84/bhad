@@ -74,8 +74,7 @@ class discretize(BaseEstimator, TransformerMixin):
     make_labels: assign integer labels to bins instead of technical intervals
     """
     def __init__(self, columns : List[str] = [], nbins : int = None, lower : float = None, k : int = 1, 
-                 round_intervals : int = 5, eps : float = .001, 
-                 make_labels : bool = False, 
+                 round_intervals : int = 5, eps : float = .001, make_labels : bool = False, 
                  verbose : bool = True, prior_gamma : float = 0.9, prior_max_M : int = 50,  # estimate number of bins M
                  **kwargs):
         
@@ -112,14 +111,17 @@ class discretize(BaseEstimator, TransformerMixin):
                     print("Reseting index of input dataframe.")    
             df_new = deepcopy(X)
             self.nbins = self.nof_bins    # initialize (might be changed in case of low variance features) 
-            self.cat_columns = df_new.select_dtypes(include='object').columns.tolist()  # categorical (for later reference in postproc.)
+            self.cat_columns = df_new.select_dtypes(include=['object','category']).columns.tolist()  # categorical (for later reference in postproc.)
             if not self.columns:
-                self.columns = df_new.select_dtypes(include=[np.number]).columns.tolist()    # numeric features only
+                self.columns = df_new.select_dtypes(include=[np.number, 'float', 'int']).columns.tolist()    # numeric features only
 
             if self.verbose:
-                 print(f"Used {len(self.columns)} numeric feature(s) and {len(self.cat_columns)} categorical feature(s).")       
+                print(f"Input shape: {X.shape}")
+                print(f"Used {len(self.columns)} numeric feature(s) and {len(self.cat_columns)} categorical feature(s).")      
+
             df_new[self.columns] = df_new[self.columns].astype(float)        
-            ptive_inf = float ('inf') ; ntive_inf = float('-inf')
+            ptive_inf = float ('inf')
+            ntive_inf = float('-inf')
             self.df_orig = deepcopy(df_new[self.columns + self.cat_columns])   # train data with non-discretized values for numeric features for model explainer
 
             for col in self.columns:
@@ -130,9 +132,7 @@ class discretize(BaseEstimator, TransformerMixin):
                     #---------------------------------------------------
                     if self.nof_bins is None:
                         if self.verbose : 
-                            print("Determining optimal number of bins via MAP estimate")
-                        #self.nbins = 1 + ceil(np.log2(len(v)))    # use Sturge's rule for number of bins per variable
-                        #self.nbins = freedman_diaconis(v)    # use FD rule
+                            print("Determining optimal number of bins for numeric features")
                         #print(f'FD rule: {freedman_diaconis(v)}')
                         #print(f'Sturges: {1 + ceil(np.log2(len(v)))}')
                         
@@ -185,10 +185,12 @@ class discretize(BaseEstimator, TransformerMixin):
                     self.save_binnings[col] = my_bins
                     assert (self.nbins + 1) == len(set(my_bins)), 'Your created bins in '+str(col)+' are not unique my_bins!'
                     x = pd.cut(v, bins = my_bins, duplicates = "drop", include_lowest = True)
-                    if self.make_labels : x.categories = [str(i) for i in np.arange(1,len(bs)+1)]         # set integer labels
+                    if self.make_labels : 
+                        x.categories = [str(i) for i in np.arange(1,len(bs)+1)]         # set integer labels
                     df_new[col] = x.astype(object)
                     #self.counts_binned[col] = df_new[col].value_counts()
-                    if self.nof_bins is not None: self.nbins = self.nof_bins             # resetting nbins, in case of zero variance features...
+                    if self.nof_bins is not None: 
+                        self.nbins = self.nof_bins             # resetting nbins, in case of zero variance features...
 
             # Tag as fitted for sklearn compatibility: 
             # https://scikit-learn.org/stable/developers/develop.html#estimated-attributes
@@ -216,8 +218,8 @@ class discretize(BaseEstimator, TransformerMixin):
                print("Reseting index of input dataframe.")    
 
         df_new = deepcopy(X)
-        self.cat_columns = df_new.select_dtypes(include='object').columns.tolist()  # categorical (for later reference in postproc.)
-        x_columns = df_new.select_dtypes(include=[np.number]).columns.tolist()    # numeric features only
+        self.cat_columns = df_new.select_dtypes(include=['object', 'category']).columns.tolist()  # categorical (for later reference in postproc.)
+        x_columns = df_new.select_dtypes(include=[np.number, 'float', 'int']).columns.tolist()    # numeric features only
 
         # Check if columns in X and X_train are compatible:
         for col in x_columns : 

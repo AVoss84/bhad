@@ -31,8 +31,8 @@ print(dataset.shape)
 
 dataset.info(verbose=True)
 
-dataset.select_dtypes(include=['float64'])
-dataset.select_dtypes(include=['object'])
+dataset.select_dtypes(include=['float', 'int'])
+dataset.select_dtypes(include=['object', 'category'])
 
 
 from sklearn.model_selection import train_test_split
@@ -132,7 +132,7 @@ local_expl = explainer.Explainer(pipe.named_steps['model'], pipe.named_steps['di
 
 expl = local_expl.fit()
 
-df_orig, expl_thresholds = local_expl.explain_bhad()
+df_orig, expl_thresholds = local_expl.get_explanation()
 
 df_orig.shape
 
