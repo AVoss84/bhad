@@ -1,22 +1,23 @@
-from sklearn.base import BaseEstimator, OutlierMixin, TransformerMixin
-from sklearn.utils.validation import check_is_fitted
-#from sklearn.preprocessing import OneHotEncoder
+import os, sys, warnings, functools, math, time
 from typing import (List, Tuple)
 import numpy as np
 import pandas as pd
 from pandas.api.types import CategoricalDtype
+from sklearn.base import BaseEstimator, OutlierMixin, TransformerMixin
+from sklearn.utils.validation import check_is_fitted
+#from sklearn.preprocessing import OneHotEncoder
 from scipy.special import loggamma
 from scipy.integrate import simpson
 from scipy.sparse import csr_matrix
 from scipy.stats import wishart, bernoulli, norm
 #from scipy.stats import t as student
 from scipy.optimize import minimize_scalar
-import os, sys, warnings, functools, math, time
-from math import floor, ceil
+#from math import floor, ceil
 from copy import deepcopy
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from functools import wraps
+from tqdm.auto import tqdm   
 
 
 # timer decorator for any function func:
@@ -219,10 +220,10 @@ class discretize(BaseEstimator, TransformerMixin):
 
         df_new = deepcopy(X)
         self.cat_columns = df_new.select_dtypes(include=['object', 'category']).columns.tolist()  # categorical (for later reference in postproc.)
-        x_columns = df_new.select_dtypes(include=[np.number, 'float', 'int']).columns.tolist()    # numeric features only
+        numerical_columns = df_new.select_dtypes(include=[np.number, 'float', 'int']).columns.tolist()    # numeric features only
 
         # Check if columns in X and X_train are compatible:
-        for col in x_columns : 
+        for col in numerical_columns: 
             assert col in self.columns_, 'Column {} not among loaded X_train columns!'.format(col)
         df_new[self.columns_] = df_new[self.columns_].astype(float)   
 
@@ -480,7 +481,7 @@ class onehot_encoder(TransformerMixin, BaseEstimator):
         if self.exclude_col:
             print("Features",self.exclude_col, 'excluded.')  
         df = deepcopy(X[self.selected_col])
-        for z, var in enumerate(df.columns):
+        for z, var in enumerate(df.columns):         # loop over columns
             self.unique_categories_[var] = df[var].unique().tolist()
             # Add 'Unknown/Others' bucket to levels for unseen levels:
             df[var] = df[var].astype(CategoricalDtype(self.unique_categories_[var] + [self.oos_token_]))    # add unknown catgory for out of sample levels
@@ -511,7 +512,7 @@ class onehot_encoder(TransformerMixin, BaseEstimator):
  
         df = deepcopy(X[self.selected_col])
         ohm = np.zeros((df.shape[0],len(self.columns_)))
-        for r, my_tuple in enumerate(df.itertuples(index=False)): 
+        for r, my_tuple in enumerate(df.itertuples(index=False)):    # loop over rows
             my_index = []
             for z, col in enumerate(df.columns):
                 raw_level_list = list(self.value2name_[col].keys())
@@ -539,9 +540,9 @@ class onehot_encoder(TransformerMixin, BaseEstimator):
 
         if input_features is None:
             input_features = self.selected_col
-        self.dummy_names = []; self.dummy_names_index = {}; self.dummy_names_by_feat = {}
+        self.dummy_names, self.dummy_names_index, self.dummy_names_by_feat = [], {}, {}
         for col_name in input_features:
-            mask = [col_name in col for col in self.columns_]
+            mask = [col_name+self.prefix_sep_ in col for col in self.columns_]
             if any(mask):
                 index = np.where(np.array(mask))[0]
                 self.dummy_names_index[col_name] = index

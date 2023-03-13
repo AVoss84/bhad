@@ -66,17 +66,24 @@ class Explainer:
         feat_info, modes, cdfs = dict(), dict(), dict()
         for c in cols:    
             #print(f'Column {c} is non-numeric: {is_string_dtype(df_orig[c])}')
-            cdfs[c] = ECDF(df_orig[c].tolist())   # fit empirical cdf to the non-discretized numeric orig. values
-            val_index = self.avf.enc_.dummy_names_index[c]
-            counts = pd.DataFrame(self.avf.freq_[val_index], index=self.avf.enc_.dummy_names_by_feat[c], columns = ['pmf'])
-            pmfs = counts/np.sum(counts['pmf'].values)         # rel. freq./estimate pmf
-            feat_info[c] = pmfs                                # per feature, i.e. column
-            single = feat_info.get(c).pmf           
-            modes[c] = single.idxmax(axis=0, skipna=True)      # take argmax to get the x.value of the mode
+            if c in self.avf.numeric_features_:
+                cdfs[c] = ECDF(df_orig[c].tolist())   # fit empirical cdf to the non-discretized numeric orig. values
+                feat_info[c] = 'not available'
+                modes[c] = 'not available'
+            elif c in self.avf.cat_features_:    
+                cdfs[c] = 'not available'
+                val_index = self.avf.enc_.dummy_names_index[c]
+                counts = pd.DataFrame(self.avf.freq_[val_index], index=self.avf.enc_.dummy_names_by_feat[c], columns = ['pmf'])
+                pmfs = counts/np.sum(counts['pmf'].values)         # rel. freq./estimate pmf
+                feat_info[c] = pmfs                                # per feature, i.e. column
+                single = feat_info.get(c).pmf           
+                modes[c] = single.idxmax(axis=0, skipna=True)      # take argmax to get the x.value of the mode
+            else:
+                raise ValueError(f'Column {c} missing in provided num./cat. lists! Please check your arguments.')
 
             if isinstance(modes[c], pd._libs.interval.Interval):
-                 modes[c] = round(modes[c].mid,2)
-        if self.verbose : 
+                 modes[c] = round(modes[c].mid,4)
+        if self.verbose: 
             print("Marginal cdfs estimated using train set of shape {}".format(df_orig.shape))         
         return feat_info, modes, cdfs
     
@@ -107,10 +114,10 @@ class Explainer:
                         ecdf = self.cdfs_[name]   
                         # Evaluate 1D estimated cdf step function:
                         try: 
-                            names.append(tec2biz[name]+' (Cumul.perc.: '+str(round(ecdf(val),2))+')')
+                            names.append(tec2biz[name]+' (Cumul.perc.: '+str(round(ecdf(val),3))+')')
                         except Exception as ex:
                             print(ex)
-                            names.append(name+' (Cumul.perc.: '+str(round(ecdf(val),2))+')')
+                            names.append(name+' (Cumul.perc.: '+str(round(ecdf(val),3))+')')
                         values.append(str(round(val,2)))
                         
                 # Categorical features: 
@@ -119,13 +126,13 @@ class Explainer:
                     search_index = np.array(self.feature_distr_[name].index.tolist())
                     comp = str(val) == search_index
                     # If no matching level has been found use 'Others' category and its pr.mass:
-                    if ~any(comp):
+                    if not any(comp):
                         comp_aux = (self.avf.enc_.oos_token_ == search_index)
                         row = np.where(comp_aux)[0][0]
                     else:
                         row = np.where(comp)[0][0]
                     pmf = self.feature_distr_[name].iloc[row,:].pmf
-                    names.append(tec2biz[name]+' (Perc.: '+str(round(pmf,2))+')')
+                    names.append(tec2biz[name]+' (Perc.: '+str(round(pmf,3))+')')
                     values.append(val)
                 else:
                     print(name,"neither numeric nor categorical!")
@@ -133,7 +140,7 @@ class Explainer:
     
     
     @utils.timer
-    def get_explanation(self, thresholds : float = None, nof_feat_expl : int = 5)-> Tuple[pd.DataFrame, str]:
+    def get_explanation(self, thresholds : float = None, nof_feat_expl : int = 5)-> pd.DataFrame:
         """ 
         Find most infrequent feature realizations based on the BHAD output.
         Motivation: the BHAD anomaly score is simply the unweighted average of the absolute frequencies
@@ -147,7 +154,7 @@ class Explainer:
         
         Returns:
         --------
-        df_original + string column vector with feature realisations 
+        df_original
         """
         assert hasattr(self, 'feature_distr_'), 'Fit explainer first!'
         df_orig = deepcopy(self.disc.df_orig[self.avf.df_.columns])   # raw data (no preprocessing/binning) to get the original values of features (not the discretized/binned versions)
@@ -204,4 +211,4 @@ class Explainer:
                df_orig.loc[obs, 'explanation'] = self._make_explanation_string(names_i, values_i)  
             else:   
                df_orig.loc[obs, 'explanation'] = None   
-        return  df_orig, self.expl_thresholds
+        return  df_orig
