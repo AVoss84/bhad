@@ -147,7 +147,7 @@ class Explainer:
         
         Returns:
         --------
-        df_original + string column vector with feature realisations
+        df_original
         """
         assert hasattr(self, 'feature_distr_'), 'Fit explainer first!'
         df_orig = deepcopy(self.disc.df_orig[self.avf.df_.columns])   # raw data (no preprocessing/binning) to get the original values of features (not the discretized/binned versions)
