@@ -44,4 +44,3 @@ local_expl = Explainer(pipe.named_steps['model'], pipe.named_steps['discrete']).
 df_train = local_expl.get_explanation()
 ```
 
-

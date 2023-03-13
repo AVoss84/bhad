@@ -4,7 +4,7 @@ import warnings
 import pandas as pd
 import numpy as np
 from sklearn.base import BaseEstimator, OutlierMixin
-#from sklearn.preprocessing import OneHotEncoder
+from sklearn.preprocessing import OneHotEncoder
 import bhad.utils as utils
 
 class BHAD(BaseEstimator, OutlierMixin):
@@ -81,63 +81,63 @@ class BHAD(BaseEstimator, OutlierMixin):
     
 
     def _fast_bhad(self, X : pd.DataFrame)-> pd.DataFrame:
-      """
-      Input:
-      X:            design matrix as pandas df with all features (must all be categorical, 
-                    since one-hot enc. will be applied! Otherwise run discretize() first.)
-      append_score: Should anomaly score be appended to X?
-      return: scores
-      """  
-      assert isinstance(X, pd.DataFrame), 'X must be of type pd.DataFrame'
-      selected_col = X.columns[~X.columns.isin(self.exclude_col)] 
-      if len(self.exclude_col)>0:
-            print("Features",self.exclude_col, 'excluded.')  
+        """
+        Input:
+        X:            design matrix as pandas df with all features (must all be categorical, 
+                        since one-hot enc. will be applied! Otherwise run discretize() first.)
+        append_score: Should anomaly score be appended to X?
+        return: scores
+        """  
+        assert isinstance(X, pd.DataFrame), 'X must be of type pd.DataFrame'
+        selected_col = X.columns[~X.columns.isin(self.exclude_col)] 
+        if len(self.exclude_col)>0:
+                print("Features",self.exclude_col, 'excluded.')  
+            
+        df = deepcopy(X[selected_col].astype(object)) 
+        self.df_shape = df.shape  
+        self.columns = df.select_dtypes(include=['object', 'category']).columns.tolist()  # use only categorical (including discretized numerical)
+        if len(self.columns)!= self.df_shape[1] : 
+                warnings.warn('Not all features in X are categorical!!')
+        self.df = df
         
-      df = deepcopy(X[selected_col].astype(object)) 
-      self.df_shape = df.shape  
-      self.columns = df.select_dtypes(include=['object', 'category']).columns.tolist()  # use only categorical (including discretized numerical)
-      if len(self.columns)!= self.df_shape[1] : 
-            warnings.warn('Not all features in X are categorical!!')
-      self.df = df
-      unique_categories_ = [df[var].unique().tolist() + ['infrequent'] for var in df.columns]
-      
-      # Apply one-hot encoder to categorical -> sparse dummy matrix
-      #-------------------------------------------------------------
-      #self.enc = OneHotEncoder(handle_unknown='infrequent_if_exist', dtype = int, categories = unique_categories_)
-      self.enc = utils.onehot_encoder(prefix_sep='__', verbose=self.verbose)   # more flexible but much slower
-      self.df_one = self.enc.fit_transform(df).toarray()   
-      assert all(np.sum(self.df_one, axis=1) == df.shape[1]), 'Row sums must be equal to number of features!!'
-      if self.verbose : 
-        print("Matrix dimension after one-hot encoding:", self.df_one.shape)  
-      self.columns_onehot_ = self.enc.get_feature_names_out()
-      
-      # Prior parameters and sufficient statistics:
-      #----------------------------------------------
-      self.alphas = np.array([self.alpha]*self.df_one.shape[1])           # Dirichlet concentration parameters; aka pseudo counts
-      self.freq = self.df_one.sum(axis=0)                                 # suff. statistics of multinomial likelihood
-      self.log_pred = np.log((self.alphas + self.freq)/np.sum(self.alphas + self.freq))  # log posterior predictive probabilities for single trial / multinoulli
+        # Apply one-hot encoder to categorical -> sparse dummy matrix
+        #-------------------------------------------------------------
+        #unique_categories_ = [df[var].unique().tolist() + ['infrequent'] for var in df.columns]
+        #self.enc = OneHotEncoder(handle_unknown='infrequent_if_exist', dtype = int, categories = unique_categories_)
+        self.enc = utils.onehot_encoder(prefix_sep='__', verbose=self.verbose)   # more flexible but much slower
+        self.df_one = self.enc.fit_transform(df).toarray()   
+        assert all(np.sum(self.df_one, axis=1) == df.shape[1]), 'Row sums must be equal to number of features!!'
+        if self.verbose : 
+            print("Matrix dimension after one-hot encoding:", self.df_one.shape)  
+        self.columns_onehot_ = self.enc.get_feature_names_out()
+        
+        # Prior parameters and sufficient statistics:
+        #----------------------------------------------
+        self.alphas = np.array([self.alpha]*self.df_one.shape[1])           # Dirichlet concentration parameters; aka pseudo counts
+        self.freq = self.df_one.sum(axis=0)                                 # suff. statistics of multinomial likelihood
+        self.log_pred = np.log((self.alphas + self.freq)/np.sum(self.alphas + self.freq))  # log posterior predictive probabilities for single trial / multinoulli
 
-      # Duplicate list of marg. freq. in an array for elementwise multiplication  
-      # i.e. Repeat counts for each obs. i =1...n
-      #---------------------------------------------------------------------------   
-      # Keep frequencies for explanation later         
-      a = np.tile(self.freq, (self.df_shape[0], 1))     # Repeat counts for each obs. i =1...n
-      a_bayes = np.tile(self.log_pred, (self.df_shape[0], 1))
+        # Duplicate list of marg. freq. in an array for elementwise multiplication  
+        # i.e. Repeat counts for each obs. i =1...n
+        #---------------------------------------------------------------------------   
+        # Keep frequencies for explanation later         
+        a = np.tile(self.freq, (self.df_shape[0], 1))     # Repeat counts for each obs. i =1...n
+        a_bayes = np.tile(self.log_pred, (self.df_shape[0], 1))
 
-      # Keep only nonzero matrix entries 
-      # (via one-hot encoding matrix), i.e. freq. for respective entries
-      # Assign each obs. the overall category count
-      #-------------------------------------------------------------------
-      self.f_mat = self.df_one * np.array(a)              # keep only nonzero matrix entries
-      self.f_mat_bayes = self.df_one * np.array(a_bayes)
+        # Keep only nonzero matrix entries 
+        # (via one-hot encoding matrix), i.e. freq. for respective entries
+        # Assign each obs. the overall category count
+        #-------------------------------------------------------------------
+        self.f_mat = self.df_one * np.array(a)              # keep only nonzero matrix entries
+        self.f_mat_bayes = self.df_one * np.array(a_bayes)
 
-      # Calculate outlier score for each row (observation), 
-      # see equation (5) in [1]
-      #-----------------------------------------------------
-      out = pd.Series(np.apply_along_axis(np.sum, 1, self.f_mat_bayes), index=df.index)    
-      if self.append_score:  
-         out = pd.concat([df, pd.DataFrame(out, columns = ['outlier_score'])], axis=1)
-      return out    
+        # Calculate outlier score for each row (observation), 
+        # see equation (5) in [1]
+        #-----------------------------------------------------
+        out = pd.Series(np.apply_along_axis(np.sum, 1, self.f_mat_bayes), index=df.index)    
+        if self.append_score:  
+            out = pd.concat([df, pd.DataFrame(out, columns = ['outlier_score'])], axis=1)
+        return out    
     
 
     def fit(self, X : pd.DataFrame, y : Union[np.array, pd.Series] = None)-> 'BHAD':
