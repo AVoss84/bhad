@@ -1,14 +1,15 @@
 from sklearn.base import BaseEstimator, OutlierMixin, TransformerMixin
 from sklearn.utils.validation import check_is_fitted
-from sklearn.preprocessing import OneHotEncoder
-from typing import (List, Optional, Tuple)
+#from sklearn.preprocessing import OneHotEncoder
+from typing import (List, Tuple)
 import numpy as np
 import pandas as pd
 from pandas.api.types import CategoricalDtype
 from scipy.special import loggamma
+from scipy.integrate import simpson
 from scipy.sparse import csr_matrix
-from scipy.stats import wishart, multivariate_normal, bernoulli, multinomial, beta, norm
-from scipy.stats import t as student
+from scipy.stats import wishart, bernoulli, norm
+#from scipy.stats import t as student
 from scipy.optimize import minimize_scalar
 import os, sys, warnings, functools, math, time
 from math import floor, ceil
@@ -32,6 +33,20 @@ def timer(func):
     return wrapper_timer
 
 
+#---------------------------------------------
+def paste(*lists, sep : str = " ", collapse : str = None)-> List[str]:
+    """
+    Concatenate/Collapse two lists of strings, separate elements by sep.
+    Mimics the paste function in R.
+    """ 
+    def reduce_concat(x, sep : str = ""):
+        return functools.reduce(lambda x, y: str(x) + sep + str(y), x)
+
+    result = map(lambda x: reduce_concat(x, sep=sep), zip(*lists))
+    if collapse is not None:
+        return reduce_concat(result, sep=collapse)
+    return list(result)
+#----------------------------------------------------
 
 def jitter(M: int, noise_scale: float = 10**5., seed : int = None)-> np.array:
 
@@ -71,15 +86,15 @@ class discretize(BaseEstimator, TransformerMixin):
         self.lower = lower 
         self.verbose = verbose
         self.k = k
+        self.gamma_grid = np.linspace(1e-4,1-1e-4, 30)
         self.prior_gamma = prior_gamma
         self.prior_max_M = prior_max_M
         self.eps = eps                           # threshold for close-to-zero-variance
         self.make_labels = make_labels
-        if verbose : print(f'Using {nbins} number of bins.' if nbins else 'Computing Bayes estimate for number of bins per dimension.')
-        if self.verbose : print("Discretize continous features.")
-
+        
         if self.lower and (self.lower != 0):
-            if self.verbose : warnings.warn("'\nNote: lower != 0 not supported currently, will be set to None!'")
+            if self.verbose : 
+                warnings.warn("'\nNote: lower != 0 not supported currently, will be set to None!'")
             self.lower = None 
     
     def __del__(self):
@@ -87,19 +102,27 @@ class discretize(BaseEstimator, TransformerMixin):
         #print(class_name, "destroyed")
     
     @timer
-    def fit(self, X : pd.DataFrame, y=None)-> 'discretize':
+    def fit(self, X : pd.DataFrame)-> 'discretize':
         
             assert isinstance(X, pd.DataFrame), 'Input X must be pandas dataframe!'
-            self.nbins = self.nof_bins    # initialize (might be changed in case of low variance features)
-            df_new = deepcopy(X) 
-            self.cat_columns = df_new.select_dtypes(include='object').columns.tolist()  # categorical (for later reference in postproc.)
+            if X.index[0] != 0:    
+                X.reset_index(drop=True, inplace=True)     # Need this to conform with 0...n-1 index in explainer and elsewhere 
+                if self.verbose: 
+                    print("Reseting index of input dataframe.")    
+            df_new = deepcopy(X)
+            self.nbins = self.nof_bins    # initialize (might be changed in case of low variance features) 
+            self.cat_columns = df_new.select_dtypes(include=['object','category']).columns.tolist()  # categorical (for later reference in postproc.)
             if not self.columns:
-                self.columns = df_new.select_dtypes(include=[np.number]).columns.tolist()    # numeric features only
+                self.columns = df_new.select_dtypes(include=[np.number, 'float', 'int']).columns.tolist()    # numeric features only
 
-            if self.verbose: print(f"Used {len(self.columns)} numeric feature(s) and {len(self.cat_columns)} categorical feature(s).")       
+            if self.verbose:
+                print(f"Input shape: {X.shape}")
+                print(f"Used {len(self.columns)} numeric feature(s) and {len(self.cat_columns)} categorical feature(s).")      
+
             df_new[self.columns] = df_new[self.columns].astype(float)        
-            ptive_inf = float ('inf') ; ntive_inf = float('-inf')
-            #self.df_orig = deepcopy(df_new[self.columns + self.cat_columns])   # train data with non-discretized values for numeric features for model explainer
+            ptive_inf = float ('inf')
+            ntive_inf = float('-inf')
+            self.df_orig = deepcopy(df_new[self.columns + self.cat_columns])   # train data with non-discretized values for numeric features for model explainer
 
             for col in self.columns:
                     v = df_new[col].values       # values of feature col
@@ -108,19 +131,17 @@ class discretize(BaseEstimator, TransformerMixin):
                     # using its Bayesian Maximum A-Posteriori estimate: 
                     #---------------------------------------------------
                     if self.nof_bins is None:
-                        if self.verbose : print("Determining optimal number of bins via MAP estimate")
-                        #self.nbins = 1 + ceil(np.log2(len(v)))    # use Sturge's rule for number of bins per variable
-                        #self.nbins = freedman_diaconis(v)    # use FD rule
+                        if self.verbose : 
+                            print("Determining optimal number of bins for numeric features")
                         #print(f'FD rule: {freedman_diaconis(v)}')
-
-                        #lpr = {m:utils.log_post_nbins(m, v) for m in range(1,80, 1)}   # own Bayesian Block method
+                        #print(f'Sturges: {1 + ceil(np.log2(len(v)))}')
                         
                         # Evaluate log joint posterior of grid of number of bin values:
                         #---------------------------------------------------------------
-                        lpr = {m:log_joint_post_nbins_gamma(m, gamma=self.prior_gamma, y=v, max_M=self.prior_max_M) for m in range(1,self.prior_max_M, 1)}
-
-                        #lpr = {m:(log_post_nbins(m, y=v) + np.log(geometric_prior(m, gamma = self.prior_gamma, max_M = self.prior_max_M))) for m in range(1,self.prior_max_M, 1)}
+                        log_marg_prior_nbins = {m : np.log(1e-10 + simpson(np.array([geometric_prior(M = m, gamma = g, max_M = self.prior_max_M, log = False) for g in self.gamma_grid]), self.gamma_grid)) for m in range(1, self.prior_max_M, 1)}
                         
+                        lpr = {m : log_marg_prior_nbins[m] + log_marglike_nbins(M = m, y = v) for m in range(1,self.prior_max_M, 1)}
+                      
                         # Compute K_MAP for each feature:
                         #---------------------------------
                         self.nbins = max(lpr, key=lpr.get)    
@@ -132,10 +153,12 @@ class discretize(BaseEstimator, TransformerMixin):
                     if (np.nanvar(v) < self.eps):                # check for close to zero-variance feature .np.nanstd(v)
                         self.nbins = len(set(v))
                         v += jitter(M = len(v), noise_scale = 10**5.)
-                        if self.verbose: print("{} has close to zero variance - jitter applied! Overwriting nbins to {}.".format(col, self.nbins))
+                        if self.verbose: 
+                            print("{} has close to zero variance - jitter applied! Overwriting nbins to {}.".format(col, self.nbins))
 
                     if (self.lower == 0) & any(v < 0):
-                        if self.verbose: print("Replacing negative values for", col)
+                        if self.verbose: 
+                            print("Replacing negative values for", col)
                         v = np.where(v<0, 0, v)
 
                     # Define knots for the binning (equally spaced) -> histogram
@@ -162,10 +185,12 @@ class discretize(BaseEstimator, TransformerMixin):
                     self.save_binnings[col] = my_bins
                     assert (self.nbins + 1) == len(set(my_bins)), 'Your created bins in '+str(col)+' are not unique my_bins!'
                     x = pd.cut(v, bins = my_bins, duplicates = "drop", include_lowest = True)
-                    if self.make_labels : x.categories = [str(i) for i in np.arange(1,len(bs)+1)]         # set integer labels
+                    if self.make_labels : 
+                        x.categories = [str(i) for i in np.arange(1,len(bs)+1)]         # set integer labels
                     df_new[col] = x.astype(object)
-                    self.counts_binned[col] = df_new[col].value_counts()
-                    if self.nof_bins is not None: self.nbins = self.nof_bins             # resetting nbins, in case of zero variance features...
+                    #self.counts_binned[col] = df_new[col].value_counts()
+                    if self.nof_bins is not None: 
+                        self.nbins = self.nof_bins             # resetting nbins, in case of zero variance features...
 
             # Tag as fitted for sklearn compatibility: 
             # https://scikit-learn.org/stable/developers/develop.html#estimated-attributes
@@ -174,28 +199,35 @@ class discretize(BaseEstimator, TransformerMixin):
             self.nbins_ = self.nbins 
             self.xindex_fitted_ = df_new.index
             self.save_binnings_ = self.save_binnings 
-            self.counts_binned_ = self.counts_binned 
+            #self.counts_binned_ = self.counts_binned 
             self.lower_ = self.lower 
             self.k_ = self.k 
             self.eps_ = self.eps 
             self.make_labels_ = self.make_labels 
-            #self.df_orig_ = deepcopy(self.df_orig)
-            if self.verbose and (self.nof_bins is not None): print("Binned continous features into", self.nbins,"bins.")
+            self.df_orig_ = deepcopy(self.df_orig)
+            if self.verbose and (self.nof_bins is not None): 
+                print("Binned continous features into", self.nbins,"bins.")
             return self
     
     @timer
-    def transform(self, X : pd.DataFrame, y=None)-> pd.DataFrame:
+    def transform(self, X : pd.DataFrame)-> pd.DataFrame:
         
+        if X.index[0] != 0:    
+            X.reset_index(drop=True, inplace=True)     # Need this to conform with 0...n-1 index in explainer and elsewhere 
+            if self.verbose: 
+               print("Reseting index of input dataframe.")    
+
         df_new = deepcopy(X)
-        self.cat_columns = df_new.select_dtypes(include='object').columns.tolist()  # categorical (for later reference in postproc.)
-        x_columns = df_new.select_dtypes(include=[np.number]).columns.tolist()    # numeric features only
+        self.cat_columns = df_new.select_dtypes(include=['object', 'category']).columns.tolist()  # categorical (for later reference in postproc.)
+        x_columns = df_new.select_dtypes(include=[np.number, 'float', 'int']).columns.tolist()    # numeric features only
 
         # Check if columns in X and X_train are compatible:
-        for col in x_columns : assert col in self.columns_, 'Column {} not among loaded X_train columns!'.format(col)
+        for col in x_columns : 
+            assert col in self.columns_, 'Column {} not among loaded X_train columns!'.format(col)
         df_new[self.columns_] = df_new[self.columns_].astype(float)   
 
         # Update & Keep for model explainer
-        #self.df_orig = deepcopy(df_new[self.columns_ + self.cat_columns])  
+        self.df_orig = deepcopy(df_new[self.columns_ + self.cat_columns])  
 
         # if you already have it from fit then just output it
         if hasattr(self, 'X_') and (len(self.xindex_fitted_) == X.shape[0]):
@@ -214,7 +246,7 @@ class discretize(BaseEstimator, TransformerMixin):
                 df_new.loc[ind, self.columns_] = row_values
             except Exception as ex:
                 print(ex)        
-        return df_new  
+        return df_new
 
 
 def freedman_diaconis(data : np.array, return_width : bool = False)-> int:
@@ -242,17 +274,18 @@ def freedman_diaconis(data : np.array, return_width : bool = False)-> int:
         result = int((datrng / bw) + 1)
     return result
 
-def log_post_nbins(M : int, y : np.array)->float:
-      """
-      Log posterior of number of bins M
-      using conjugate Jeffreys' prior for the bin probabilities 
-      and a flat improper prior for the number of bins. This is therefore equivalent to the marginal
-      log-likelihood of the number of bins  
-      """
-      N = len(y)
-      counts, bin_edges = np.histogram(y, bins = np.linspace(min(y), max(y), M+1))   # evenly spaced bins
-      post_M = N*np.log(M) + loggamma(M/2) -M*loggamma(1/2) -loggamma(N + M/2) + np.sum(loggamma(counts + 1/2)) 
-      return post_M
+
+def log_marglike_nbins(M : int, y : np.array)->float:
+    """
+    Log posterior of number of bins M
+    using conjugate Jeffreys' prior for the bin probabilities 
+    and a flat improper prior for the number of bins. This is therefore equivalent to the marginal
+    log-likelihood of the number of bins  
+    """
+    N = len(y)
+    counts, _ = np.histogram(y, bins = np.linspace(min(y), max(y), M+1))   # evenly spaced bins
+    post_M = N*np.log(M) + loggamma(M/2) -M*loggamma(1/2) -loggamma(N + M/2) + np.sum(loggamma(counts + 1/2)) 
+    return post_M
 
 
 def exp_normalize(x : np.array)-> np.array:
@@ -261,9 +294,9 @@ def exp_normalize(x : np.array)-> np.array:
     return y / y.sum()
 
 
-def geometric_prior(M, gamma : float = 0.7, max_M : int = 100, log : bool = True)-> float:
-    """Geometric (power series) prior
-
+def geometric_prior(M : int, gamma : float = 0.7, max_M : int = 100, log : bool = False)-> float:
+    """
+    Geometric (power series) prior
     Args:
         M (_type_): number of bins
         gamma (float, optional): prior hyperparameter. Defaults to 0.7.
@@ -275,24 +308,25 @@ def geometric_prior(M, gamma : float = 0.7, max_M : int = 100, log : bool = True
     """
     # Assuming |gamma| < 1 for convergence of the series
     gamma = gamma if 0 < gamma < 1 else 0    # indicator function according to uniform prior 
-    P0 = (1-gamma)/(1-gamma**(max_M))
+    P_0 = (1-gamma)/(1-gamma**(max_M))
     if log:
-        return np.log(P0*(gamma**M)+ 1e-9)
+        return np.log(P_0*(gamma**M)+ 1e-9)
     else:
-        return P0*(gamma**M) 
+        return P_0*(gamma**M) 
 
 
 def log_joint_post_nbins_gamma(m : int, gamma : float, y : np.array, max_M : int = 100):
     """
     Log joint posterior of number of bins M and gamma
     """  
-    return log_post_nbins(m, y) + geometric_prior(m, gamma, max_M, log = True)
+    return log_marglike_nbins(m, y) + geometric_prior(m, gamma, max_M, log = True)
 
 
 def bart_simpson_density(x : np.array, m : int = 4)-> np.array:
     """
     Calculate density of Bart Simpson distr. aka The Claw
     (see Larry Wasserman, All of nonparametric statistics, section 6)
+    m: number of mixture components 
     """
     mix = 0
     for j in range(m+1):
@@ -313,7 +347,8 @@ def rbartsim(MCsim : int = 10**4, seed : int = None, verbose : bool = True):
     Sample from Bart Simpson density via Accept-Reject algorithm, 
     see for example Robert, Casella
     """
-    if seed: np.random.seed(seed) 
+    if seed: 
+        np.random.seed(seed) 
     result = minimize_scalar(lambda t: -accratio(t))    # maximize function
     M = -result.fun 
     u = np.random.uniform(0,1,size=MCsim)
@@ -322,9 +357,9 @@ def rbartsim(MCsim : int = 10**4, seed : int = None, verbose : bool = True):
     accepted = u <= accratio(x)/M
     draws = x[accepted]               # accepted random draws from proposal
     rate = sum(accepted)/MCsim        # acceptance rate 
-    if verbose : print(f'Acceptance rate: {rate}\n')  
+    if verbose : 
+        print(f'Acceptance rate: {rate}\n')  
     return draws
-
 
 class mvt2mixture:
     
@@ -420,6 +455,7 @@ class mvt2mixture:
             fig.savefig('mixturePlot3D.jpg')
             print("Saved to:", os.getcwd())
 
+            
 class onehot_encoder(TransformerMixin, BaseEstimator):
 
     def __init__(self, exclude_columns : List[str] = [], prefix_sep : str = '_', oos_token : str = 'OTHERS', verbose : bool = True, **kwargs):
@@ -434,13 +470,14 @@ class onehot_encoder(TransformerMixin, BaseEstimator):
         self.prefix_sep_ = prefix_sep
         self.verbose = verbose
         self.unique_categories_, self.value2name_ = dict(), dict()
-        if self.verbose : print("One-hot encoding categorical features.")
+        if self.verbose : 
+            print("One-hot encoding categorical features.")
 
     @timer
     def fit(self, X: pd.DataFrame)-> 'onehot_encoder':
 
         self.selected_col = X.columns[~X.columns.isin(self.exclude_col)] 
-        if len(self.exclude_col)>0:
+        if self.exclude_col:
             print("Features",self.exclude_col, 'excluded.')  
         df = deepcopy(X[self.selected_col])
         for z, var in enumerate(df.columns):
