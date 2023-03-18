@@ -102,7 +102,7 @@ class discretize(BaseEstimator, TransformerMixin):
         class_name = self.__class__.__name__
         #print(class_name, "destroyed")
     
-    @timer
+    #@timer
     def fit(self, X : pd.DataFrame)-> 'discretize':
         
             assert isinstance(X, pd.DataFrame), 'Input X must be pandas dataframe!'
@@ -210,7 +210,7 @@ class discretize(BaseEstimator, TransformerMixin):
                 print("Binned continous features into", self.nbins,"bins.")
             return self
     
-    @timer
+    #@timer
     def transform(self, X : pd.DataFrame)-> pd.DataFrame:
         
         if X.index[0] != 0:    
@@ -474,7 +474,7 @@ class onehot_encoder(TransformerMixin, BaseEstimator):
         if self.verbose : 
             print("One-hot encoding categorical features.")
 
-    @timer
+    #@timer
     def fit(self, X: pd.DataFrame)-> 'onehot_encoder':
 
         self.selected_col = X.columns[~X.columns.isin(self.exclude_col)] 
@@ -500,7 +500,7 @@ class onehot_encoder(TransformerMixin, BaseEstimator):
         self.X_ = df
         return self    
 
-    @timer
+    #@timer
     def transform(self, X: pd.DataFrame)-> csr_matrix:
         
         check_is_fitted(self)        # Check if fit had been called
