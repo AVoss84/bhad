@@ -17,7 +17,7 @@ pip install -e src
 
 ```python
 from sklearn.pipeline import Pipeline
-from bhad.utils import discretize
+from bhad.utils import Discretize
 from bhad.model import BHAD
 from bhad.explainer import Explainer
 
@@ -25,7 +25,7 @@ numeric_cols = [....]
 categorical_cols = [....]
 
 pipe = Pipeline(steps=[
-    ('discrete', discretize(nbins = None)),   # discretize continous features + model selection
+    ('discrete', Discretize(nbins = None)),   # discretize continous features + model selection
     ('model', BHAD(contamination = 0.01, numeric_features = numeric_cols, cat_features = categorical_cols))
 ])
 ```
