@@ -13,7 +13,7 @@ seed = 42
 outlier_prob_true = .01         # probab. for outlier ; should be consistent with contamination rate in your model
 
 k = 33                          # feature dimension 
-N = 10**4                     # sample size
+N = 10**3                     # sample size
 
 # Specify first and second moments for each component  
 bvt = mvt2mixture(thetas = {'mean1' : np.full(k,-1), 'mean2' : np.full(k,.5), 
@@ -103,11 +103,30 @@ print(np.unique(y_test, return_counts=True))
 
 #reload(bhad)
 
-from sklearn.pipeline import Pipeline
 
 #num = list(dataset.columns)
 # num.remove('var30')
 
+disco = discretize(nbins = None, verbose = False)
+
+xtrans = disco.fit_transform(X_train)
+xtrans
+
+[str(v) for v in disco.save_binnings_['var0'].tolist()] + ['infrequent']
+
+X_train.columns
+
+#unique_categories_ = [X_train[var].unique().tolist() + ['infrequent'] for var in X_train.columns]
+
+unique_categories_ = [[v for v in disco.save_binnings_[var].tolist()] + ['infrequent'] for var in X_train.columns]
+
+from sklearn.preprocessing import OneHotEncoder
+
+enc = OneHotEncoder(handle_unknown='infrequent_if_exist', dtype = int, categories = unique_categories_)
+df_one = enc.fit_transform(xtrans).toarray()  
+df_one.shape
+np.sum(df_one, axis=1)
+df_one[0,:]
 
 from sklearn.pipeline import Pipeline
 
@@ -116,12 +135,18 @@ pipe = Pipeline(steps=[
     ('model', BHAD(contamination = 0.01, numeric_features = list(X_train.columns)))
 ])
 
-pipe.fit(X_train)
 
+#pipe.fit(X_train)
 
-#scores_train = pipe.decision_function(dataset)
-#y_pred = pipe.fit_predict(dataset)     
+y_pred_train = pipe.fit_predict(X_train)     
+#scores_train = pipe.decision_function(X_train)
 
+bh = pipe.named_steps['model']
+bh.df_one.shape
+bh.df_one_.shape
+
+y_pred_test = pipe.predict(X_test)
+#scores_test = pipe.decision_function(X_test)
 
 
 from bhad import explainer

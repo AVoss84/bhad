@@ -10,17 +10,16 @@ from sklearn.utils.validation import check_is_fitted
 from tqdm.auto import tqdm       
 import bhad.utils as utils
 from bhad.model import BHAD
-from bhad.utils import discretize
+from bhad.utils import Discretize
 
 class Explainer:
 
-    def __init__(self, bhad_obj : Type['BHAD'], discretize_obj : Type['discretize'], verbose : bool = True):
+    def __init__(self, bhad_obj : Type['BHAD'], discretize_obj : Type['Discretize'], verbose : bool = True):
         """
-        Create model explanations per observation/claim using the BHAD
-        algorithm as global approximation for the ensemble model.
+        Create model explanations per observation 
         Args:
             bhad_obj (sklearn estimator): fitted bhad class instance 
-                                         that cointains al relevant attributes
+                                         that cointains all relevant attributes
             discretize_obj (sklearn transformer): fitted discretize class instance
             verbose (bool, optional): [description]. Defaults to True.
         """
@@ -66,17 +65,24 @@ class Explainer:
         feat_info, modes, cdfs = dict(), dict(), dict()
         for c in cols:    
             #print(f'Column {c} is non-numeric: {is_string_dtype(df_orig[c])}')
-            cdfs[c] = ECDF(df_orig[c].tolist())   # fit empirical cdf to the non-discretized numeric orig. values
-            val_index = self.avf.enc_.dummy_names_index[c]
-            counts = pd.DataFrame(self.avf.freq_[val_index], index=self.avf.enc_.dummy_names_by_feat[c], columns = ['pmf'])
-            pmfs = counts/np.sum(counts['pmf'].values)         # rel. freq./estimate pmf
-            feat_info[c] = pmfs                                # per feature, i.e. column
-            single = feat_info.get(c).pmf           
-            modes[c] = single.idxmax(axis=0, skipna=True)      # take argmax to get the x.value of the mode
+            if c in self.avf.numeric_features_:
+                cdfs[c] = ECDF(df_orig[c].tolist())   # fit empirical cdf to the non-discretized numeric orig. values
+                feat_info[c] = 'not available'
+                modes[c] = 'not available'
+            elif c in self.avf.cat_features_:    
+                cdfs[c] = 'not available'
+                val_index = self.avf.enc_.dummy_names_index[c]
+                counts = pd.DataFrame(self.avf.freq_[val_index], index=self.avf.enc_.dummy_names_by_feat[c], columns = ['pmf'])
+                pmfs = counts/np.sum(counts['pmf'].values)         # rel. freq./estimate pmf
+                feat_info[c] = pmfs                                # per feature, i.e. column
+                single = feat_info.get(c).pmf           
+                modes[c] = single.idxmax(axis=0, skipna=True)      # take argmax to get the x.value of the mode
+            else:
+                raise ValueError(f'Column {c} missing in provided num./cat. lists! Please check your arguments.')
 
             if isinstance(modes[c], pd._libs.interval.Interval):
-                 modes[c] = round(modes[c].mid,2)
-        if self.verbose : 
+                 modes[c] = round(modes[c].mid,4)
+        if self.verbose: 
             print("Marginal cdfs estimated using train set of shape {}".format(df_orig.shape))         
         return feat_info, modes, cdfs
     
@@ -91,7 +97,7 @@ class Explainer:
             values_i (List[float]): _description_
 
         Returns:
-            List[str]: _description_
+            List[str]: Features in the order of rel. importance for obs. i (starting with most important)
         """
         # Convert techy names to human friendly names
         #---------------------------------------------------
@@ -107,10 +113,10 @@ class Explainer:
                         ecdf = self.cdfs_[name]   
                         # Evaluate 1D estimated cdf step function:
                         try: 
-                            names.append(tec2biz[name]+' (Cumul.perc.: '+str(round(ecdf(val),2))+')')
+                            names.append(tec2biz[name]+' (Cumul.perc.: '+str(round(ecdf(val),3))+')')
                         except Exception as ex:
                             print(ex)
-                            names.append(name+' (Cumul.perc.: '+str(round(ecdf(val),2))+')')
+                            names.append(name+' (Cumul.perc.: '+str(round(ecdf(val),3))+')')
                         values.append(str(round(val,2)))
                         
                 # Categorical features: 
@@ -119,25 +125,25 @@ class Explainer:
                     search_index = np.array(self.feature_distr_[name].index.tolist())
                     comp = str(val) == search_index
                     # If no matching level has been found use 'Others' category and its pr.mass:
-                    if ~any(comp):
+                    if not any(comp):
                         comp_aux = (self.avf.enc_.oos_token_ == search_index)
                         row = np.where(comp_aux)[0][0]
                     else:
                         row = np.where(comp)[0][0]
                     pmf = self.feature_distr_[name].iloc[row,:].pmf
-                    names.append(tec2biz[name]+' (Perc.: '+str(round(pmf,2))+')')
+                    names.append(tec2biz[name]+' (Perc.: '+str(round(pmf,3))+')')
                     values.append(val)
                 else:
                     print(name,"neither numeric nor categorical!")
         return utils.paste(names, values, sep=': ', collapse="\n") 
     
     
-    @utils.timer
+    #@utils.timer
     def get_explanation(self, thresholds : float = None, nof_feat_expl : int = 5)-> pd.DataFrame:
         """ 
         Find most infrequent feature realizations based on the BHAD output.
-        Motivation: the BHAD anomaly score is simply the unweighted average of the absolute frequencies
-        per feature level (categ. + discretized numerical). Therefore the levels which lead an observation to being
+        Motivation: the BHAD anomaly score is simply the unweighted average of the log probabilities
+        per feature level/bin (categ. + discretized numerical). Therefore the levels which lead an observation to being
         outlierish are those with (relatively) infrequent counts.
         
         Parameters
@@ -147,7 +153,7 @@ class Explainer:
         
         Returns:
         --------
-        df_original + string column vector with feature realisations
+        df_original: original dataset + additional column with explanations
         """
         assert hasattr(self, 'feature_distr_'), 'Fit explainer first!'
         df_orig = deepcopy(self.disc.df_orig[self.avf.df_.columns])   # raw data (no preprocessing/binning) to get the original values of features (not the discretized/binned versions)
@@ -157,18 +163,19 @@ class Explainer:
             self.expl_thresholds = [.2]*self.avf.df_.shape[1]
         else:
             self.expl_thresholds = thresholds
-            
-        n = self.avf.f_mat.shape[0]          # sample size current sample
-        n_ = self.avf.f_mat_.shape[0]        # sample size train set; used to convert to rel. freq.
+
+        nof_feat_expl = max(nof_feat_expl, 1)     # use at least one feature for explanation    
+        n = self.avf.f_mat.shape[0]               # sample size current sample
+        n_ = self.avf.f_mat_.shape[0]             # sample size train set; used to convert to rel. freq.
         index_row, index_col = np.nonzero(self.avf.f_mat) 
-        nz_freq = self.avf.f_mat[index_row, index_col].reshape(n,-1)          # non-zero frequencies
-        ac = np.array(self.avf.df_.columns.tolist())         # feature names
+        nz_freq = self.avf.f_mat[index_row, index_col].reshape(n,-1)    # non-zero frequencies
+        ac = np.array(self.avf.df_.columns.tolist())                    # feature names
         names = np.tile(ac, (n, 1))
-        i = np.arange(len(nz_freq))[:, np.newaxis]          # set new x-axis 
-        j = np.argsort(nz_freq, axis=1)                            # sort freq. per row and return indices
+        i = np.arange(len(nz_freq))[:, np.newaxis]                      # set new x-axis 
+        j = np.argsort(nz_freq, axis=1)                              # sort freq. per row and return indices
         nz = pd.DataFrame(nz_freq, columns = self.avf.df_.columns)   # absolute frequencies/counts
-        df_relfreq = nz/n_                                          # relative marginal frequencies
-        df_filter = np.zeros(list(df_relfreq.shape), dtype=bool)      # initialize; take only 'significantly' anomalous values
+        df_relfreq = nz/n_                                           # relative marginal frequencies
+        df_filter = np.zeros(list(df_relfreq.shape), dtype=bool)     # initialize; take only 'significantly' anomalous values
         cols = list(df_relfreq.columns)             # all column names
         #--------------------------------------------------------------------------
         # 'Identify' outliers, with relative freq. below threshold
