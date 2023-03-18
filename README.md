@@ -41,6 +41,6 @@ Get local model explanations, i.e. for each observation:
 ```python
 local_expl = Explainer(pipe.named_steps['model'], pipe.named_steps['discrete']).fit()
 
-df_train = local_expl.get_explanation()
+df_train = local_expl.get_explanation(nof_feat_expl = 3)
 ```
 
