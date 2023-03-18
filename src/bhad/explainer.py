@@ -10,11 +10,11 @@ from sklearn.utils.validation import check_is_fitted
 from tqdm.auto import tqdm       
 import bhad.utils as utils
 from bhad.model import BHAD
-from bhad.utils import discretize
+from bhad.utils import Discretize
 
 class Explainer:
 
-    def __init__(self, bhad_obj : Type['BHAD'], discretize_obj : Type['discretize'], verbose : bool = True):
+    def __init__(self, bhad_obj : Type['BHAD'], discretize_obj : Type['Discretize'], verbose : bool = True):
         """
         Create model explanations per observation 
         Args:
