@@ -164,7 +164,8 @@ class Explainer:
             self.expl_thresholds = [.2]*self.avf.df_.shape[1]
         else:
             self.expl_thresholds = thresholds
-            
+
+        nof_feat_expl = max(nof_feat_expl, 1)     # use at least one feature for explanation    
         n = self.avf.f_mat.shape[0]          # sample size current sample
         n_ = self.avf.f_mat_.shape[0]        # sample size train set; used to convert to rel. freq.
         index_row, index_col = np.nonzero(self.avf.f_mat) 
