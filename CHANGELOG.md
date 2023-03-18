@@ -25,5 +25,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - df_orig had different column order than nz_freq. This lead to the expaliner assigning the wrong values to the variable names in expalnation column (output of Explainer)
 - correct mask in get_feature_names_out() method of onehot_encoder class in utils.py. String search did not work correctly and lead to wrong indexing in pmf's of explainer.py -> make string 
 - change logical negation from '~' to 'not' in _make_explanation_string() of explainer.py. 'if ~any(comp):' leads to unexpected outcome.
+- Capitalize discretize class
 
 

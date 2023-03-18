@@ -60,7 +60,7 @@ def jitter(M: int, noise_scale: float = 10**5., seed : int = None)-> np.array:
   return np.random.random(M)/noise_scale
 
 
-class discretize(BaseEstimator, TransformerMixin):
+class Discretize(BaseEstimator, TransformerMixin):
     """
     Discretize continous features by binning. Will be used as input for Bayesian histogram anomaly detector (BHAD)
     
