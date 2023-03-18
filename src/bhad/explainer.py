@@ -16,11 +16,10 @@ class Explainer:
 
     def __init__(self, bhad_obj : Type['BHAD'], discretize_obj : Type['discretize'], verbose : bool = True):
         """
-        Create model explanations per observation/claim using the BHAD
-        algorithm as global approximation for the ensemble model.
+        Create model explanations per observation 
         Args:
             bhad_obj (sklearn estimator): fitted bhad class instance 
-                                         that cointains al relevant attributes
+                                         that cointains all relevant attributes
             discretize_obj (sklearn transformer): fitted discretize class instance
             verbose (bool, optional): [description]. Defaults to True.
         """
@@ -98,7 +97,7 @@ class Explainer:
             values_i (List[float]): _description_
 
         Returns:
-            List[str]: _description_
+            List[str]: Features in the order of rel. importance for obs. i (starting with most important)
         """
         # Convert techy names to human friendly names
         #---------------------------------------------------
@@ -139,12 +138,12 @@ class Explainer:
         return utils.paste(names, values, sep=': ', collapse="\n") 
     
     
-    @utils.timer
+    #@utils.timer
     def get_explanation(self, thresholds : float = None, nof_feat_expl : int = 5)-> pd.DataFrame:
         """ 
         Find most infrequent feature realizations based on the BHAD output.
-        Motivation: the BHAD anomaly score is simply the unweighted average of the absolute frequencies
-        per feature level (categ. + discretized numerical). Therefore the levels which lead an observation to being
+        Motivation: the BHAD anomaly score is simply the unweighted average of the log probabilities
+        per feature level/bin (categ. + discretized numerical). Therefore the levels which lead an observation to being
         outlierish are those with (relatively) infrequent counts.
         
         Parameters
@@ -154,7 +153,7 @@ class Explainer:
         
         Returns:
         --------
-        df_original
+        df_original: original dataset + additional column with explanations
         """
         assert hasattr(self, 'feature_distr_'), 'Fit explainer first!'
         df_orig = deepcopy(self.disc.df_orig[self.avf.df_.columns])   # raw data (no preprocessing/binning) to get the original values of features (not the discretized/binned versions)
@@ -166,17 +165,17 @@ class Explainer:
             self.expl_thresholds = thresholds
 
         nof_feat_expl = max(nof_feat_expl, 1)     # use at least one feature for explanation    
-        n = self.avf.f_mat.shape[0]          # sample size current sample
-        n_ = self.avf.f_mat_.shape[0]        # sample size train set; used to convert to rel. freq.
+        n = self.avf.f_mat.shape[0]               # sample size current sample
+        n_ = self.avf.f_mat_.shape[0]             # sample size train set; used to convert to rel. freq.
         index_row, index_col = np.nonzero(self.avf.f_mat) 
-        nz_freq = self.avf.f_mat[index_row, index_col].reshape(n,-1)          # non-zero frequencies
-        ac = np.array(self.avf.df_.columns.tolist())         # feature names
+        nz_freq = self.avf.f_mat[index_row, index_col].reshape(n,-1)    # non-zero frequencies
+        ac = np.array(self.avf.df_.columns.tolist())                    # feature names
         names = np.tile(ac, (n, 1))
-        i = np.arange(len(nz_freq))[:, np.newaxis]          # set new x-axis 
-        j = np.argsort(nz_freq, axis=1)                            # sort freq. per row and return indices
+        i = np.arange(len(nz_freq))[:, np.newaxis]                      # set new x-axis 
+        j = np.argsort(nz_freq, axis=1)                              # sort freq. per row and return indices
         nz = pd.DataFrame(nz_freq, columns = self.avf.df_.columns)   # absolute frequencies/counts
-        df_relfreq = nz/n_                                          # relative marginal frequencies
-        df_filter = np.zeros(list(df_relfreq.shape), dtype=bool)      # initialize; take only 'significantly' anomalous values
+        df_relfreq = nz/n_                                           # relative marginal frequencies
+        df_filter = np.zeros(list(df_relfreq.shape), dtype=bool)     # initialize; take only 'significantly' anomalous values
         cols = list(df_relfreq.columns)             # all column names
         #--------------------------------------------------------------------------
         # 'Identify' outliers, with relative freq. below threshold
