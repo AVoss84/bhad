@@ -208,8 +208,12 @@ ranks
 avg_ranks = np.mean(ranks, axis=0)
 avg_ranks
 
-ranks_global_feat_imp = pd.DataFrame(avg_ranks, index=cols, columns=['avg ranks']).sort_values(by=['avg ranks'], ascending=True)
-ranks_global_feat_imp
+global_feat_imp = pd.DataFrame(avg_ranks, index=cols, columns=['avg ranks']).sort_values(by=['avg ranks'], ascending=True)
+global_feat_imp
+
+nof_ranks = len(avg_ranks) - 1
+
+nof_ranks - global_feat_imp
 
 # index_sorted_ranks = np.argsort(avg_ranks)
 # index_sorted_ranks
