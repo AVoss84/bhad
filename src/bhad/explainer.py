@@ -29,7 +29,7 @@ class Explainer:
         check_is_fitted(bhad_obj) ; check_is_fitted(discretize_obj)
         if verbose : 
             print("--- BHAD Model Explainer ---\n")
-            print('Using fitted BHAD and fitted discretizer.')    
+            print('Using fitted BHAD and discretizer.')    
         self.verbose = verbose
         self.avf = bhad_obj
         self.disc = discretize_obj
@@ -64,7 +64,6 @@ class Explainer:
         #-------------------------------------
         feat_info, modes, cdfs = dict(), dict(), dict()
         for c in cols:    
-            #print(f'Column {c} is non-numeric: {is_string_dtype(df_orig[c])}')
             if c in self.avf.numeric_features_:
                 cdfs[c] = ECDF(df_orig[c].tolist())   # fit empirical cdf to the non-discretized numeric orig. values
                 feat_info[c] = 'not available'
@@ -164,7 +163,11 @@ class Explainer:
         else:
             self.expl_thresholds = thresholds
 
-        nof_feat_expl = max(nof_feat_expl, 1)     # use at least one feature for explanation    
+        nof_feat_expl = max(nof_feat_expl, 1)     # use at least one feature for explanation   
+
+        # Use statistics in f_mat 
+        # based on data in predict:
+        #-----------------------------
         n = self.avf.f_mat.shape[0]               # sample size current sample
         n_ = self.avf.f_mat_.shape[0]             # sample size train set; used to convert to rel. freq.
         index_row, index_col = np.nonzero(self.avf.f_mat) 
@@ -177,6 +180,19 @@ class Explainer:
         df_relfreq = nz/n_                                           # relative marginal frequencies
         df_filter = np.zeros(list(df_relfreq.shape), dtype=bool)     # initialize; take only 'significantly' anomalous values
         cols = list(df_relfreq.columns)             # all column names
+
+        #-------------------------------------------------------------
+        # Compute global feature importances (from local importances)
+        #-------------------------------------------------------------
+        ranks = np.argsort(j, axis=1)                                   # array with ranks for each observ./cell 
+        avg_ranks = np.mean(ranks, axis=0)                              # avg. rank per feature 
+        # List feat. in desc. order of rel. importance
+        # Note this is currently based on actual value of f_mat
+        # and hence which dataset has been used in the predict method of BHAD
+        # In case you want this only (or additionally for the train set), 
+        # use code above for self.avf.f_mat_ (=fit method)
+        self.global_feat_imp = pd.DataFrame(avg_ranks, index=cols, columns=['avg ranks']).sort_values(by=['avg ranks'], ascending=True)
+
         #--------------------------------------------------------------------------
         # 'Identify' outliers, with relative freq. below threshold
         # (=decision rule)
