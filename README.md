@@ -36,13 +36,13 @@ For a given dataset:
 y_pred = pipe.fit_predict(X = dataset)        
 ```
 
-Get local model explanations, i.e. for each observation:
+Get model explanations:
 
 ```python
 local_expl = Explainer(pipe.named_steps['model'], pipe.named_steps['discrete']).fit()
 
-df_train = local_expl.get_explanation(nof_feat_expl = 3)
+df_train = local_expl.get_explanation(nof_feat_expl = 3)    # individual explanations
 
-print(local_expl.global_feat_imp)         # List feat. in asc. order of rel. importance
+print(local_expl.global_feat_imp)         # global explanations
 ```
 
