@@ -216,7 +216,7 @@ class BHAD(BaseEstimator, OutlierMixin):
 
         # If you already have it from fit then just output it:
         if hasattr(self, 'X_') and X.equals(self.X_):    
-            self.f_mat = deepcopy(self.f_mat_)
+            self.f_mat = deepcopy(self.f_mat_)    # current f_mat (here based on X_train)
             return self.scores_
         else:    
             return self.scores
