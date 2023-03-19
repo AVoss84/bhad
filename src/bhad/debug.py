@@ -6,7 +6,7 @@ from importlib import reload
 
 seed = 42  
 outlier_prob_true = .01         # probab. for outlier ; should be consistent with contamination rate in your model
-k = 30                          # feature dimension 
+k = 20                          # feature dimension 
 N = 2*10**3                     # sample size
 
 # Specify first and second moments for each component  
@@ -19,6 +19,21 @@ bvt = utils.mvt2mixture(thetas = {'mean1' : np.full(k,-1), 'mean2' : np.full(k,.
 y_true, dataset = bvt.draw(n_samples = N, k = k, p = outlier_prob_true)
 
 print(dataset.shape)
+
+
+from bhad.utils import (Discretize, mvt2mixture)
+from bhad.model import BHAD
+import numpy as np
+import matplotlib.pyplot as plt
+#from importlib import reload
+from sklearn.datasets import fetch_openml
+
+X, y = fetch_openml("titanic", version=1, as_frame=True, return_X_y=True, parser="pandas")
+
+X.head(2)
+
+dataset = X.drop(['body', 'cabin', 'name', 'ticket', 'boat'], axis=1).dropna()
+y_true = y[dataset.index]
 
 
 #reload(bhad)
@@ -48,48 +63,25 @@ print(np.unique(y_train, return_counts=True))
 print(np.unique(y_test, return_counts=True))
 
 
-reload(model)
 
+
+
+from bhad.utils import (Discretize, mvt2mixture)
+from bhad.model import BHAD
+import numpy as np
+import matplotlib.pyplot as plt
+from importlib import reload
 from sklearn.pipeline import Pipeline
+from copy import deepcopy
+
+numeric_cols = list(X_train.select_dtypes(include=['float', 'int']).columns) 
+cat_cols = list(X_train.select_dtypes(include=['object', 'category']).columns)
+
+print(len(cat_cols+numeric_cols))
 
 pipe = Pipeline(steps=[
-    ('discrete' , utils.discretize(nbins = None, verbose = False)),      # step only needed if continous features are present
-    ('model', model.BHAD(contamination = 0.01))
-])
-
-y_pred_train = pipe.fit_predict(X_train)
-#pipe.score_samples(dataset)   
-scores_train = pipe.decision_function(X_train)
-scores_train
-
-
-
-
-
-
-reload(model)
-reload(utils)
-
-bm = model.BHAD(contamination = 0.01, nbins = None, verbose=True)
-
-y_pred_train = bm.fit_predict(X_train)   
-#scores_train = bm.decision_function(X_train)
-scores_train = bm.anomaly_scores
-
-
-
-
-
-from sklearn.pipeline import Pipeline
-
-reload(bhad_old)
-reload(util)
-
-pipe = Pipeline(steps=[
-    # if nbins = None, this will automatically select the optimal bin numbers 
-    # based on the MAP estimate (but will make computation slower!)
-    ('discrete' , util.discretize(nbins = None, verbose = False)),      # step only needed if continous features are present
-    ('model', bhad_old.BHAD(contamination = 0.01))
+    ('discrete', Discretize(nbins = None, verbose = False)),     
+    ('model', BHAD(contamination = 0.01, numeric_features = numeric_cols, cat_features = cat_cols))
 ])
 
 y_pred_train = pipe.fit_predict(X_train)   
@@ -97,56 +89,133 @@ scores_train = pipe.decision_function(X_train)
 
 y_pred_test = pipe.predict(X_test)
 scores_test = pipe.decision_function(X_test)
-#---------------------------------------------
-disc = utils.discretize(nbins = None, verbose = False)
-X_tilde = disc.fit_transform(X_train)
-
-model = model.BHAD(contamination = 0.01)
-
-model.fit(X_tilde)   
-
-y_pred_train = model.fit_predict(X_tilde)   
-scores_train = model.decision_function(X_tilde) 
-scores_train
-
-X_tilde_test = disc.transform(X_test)
-y_pred_test = model.predict(X_tilde_test)   
-scores_test = model.decision_function(X_tilde_test) 
-scores_test
 
 #---------------------------------------------
-reload(bhad)
+# disc = utils.Discretize(nbins = None, verbose = False)
+# X_tilde = disc.fit_transform(X_train)
+
+# bm = model.BHAD(contamination = 0.01)
+
+# model.fit(X_tilde)   
+
+# y_pred_train = model.fit_predict(X_tilde)   
+# scores_train = model.decision_function(X_tilde) 
+# scores_train
+
+# X_tilde_test = disc.transform(X_test)
+# y_pred_test = model.predict(X_tilde_test)   
+# scores_test = model.decision_function(X_tilde_test) 
+# scores_test
+
 #-------------------------------------
 
-pipe = bhad.BHAD(contamination = 0.01, verbose=False)
-
-y_pred_train = pipe.fit_predict(X_train)   
-scores_train = pipe.decision_function(X_train)
-
-#y_pred_test = pipe.predict(X_test)
-#------------------------------------------------
-
+from bhad import explainer
 import pandas as pd
-from copy import deepcopy 
 
-X_tilde = pipe.disc.fit_transform(X_test)
+reload(explainer)
 
-df = X_tilde
-df
-X = deepcopy(X_test)        
+local_expl = explainer.Explainer(pipe.named_steps['model'], pipe.named_steps['discrete']).fit()
 
-df_one = pipe.enc_.transform(df).toarray()   # apply fitted one-hot encoder to categorical -> sparse dummy matrix
-assert all(np.sum(pipe.df_one, axis=1) == df.shape[1]), 'Row sums must be equal to number of features!!'
+df_train = local_expl.get_explanation()
+#------------------------------------------------------------------------------------------------------
 
-df_one
+avf = pipe.named_steps['model']
+disc = pipe.named_steps['discrete']
 
-# Update suff. stat with abs. freq. of new data points/levels
-freq_updated_ = pipe.freq_ + pipe.df_one.sum(axis=0)      
-#freq_updated = np.log(np.exp(self.freq) + self.df_one + alpha)    # multinomial-dirichlet
+df_orig = deepcopy(disc.df_orig[avf.df_.columns])   # raw data (no preprocessing/binning) to get the original values of features (not the discretized/binned versions)
+expl_thresholds = [.2]*avf.df_.shape[1]
+nof_feat_expl = 5
 
-# Log posterior predictive probabilities for single trial / multinoulli
-log_pred = np.log((pipe.alphas + freq_updated_)/np.sum(pipe.alphas + pipe.freq_updated_))   
-f_mat = freq_updated_ * df_one           # get level specific counts for X, e.g. test set
-f_mat_bayes = log_pred * df_one  
-scores = pd.Series(np.apply_along_axis(np.sum, 1, f_mat_bayes), index=X.index) 
-scores
+nof_feat_expl = max(nof_feat_expl, 1)     # use at least one feature for explanation    
+n = avf.f_mat.shape[0]               # sample size current sample
+n_ = avf.f_mat_.shape[0]             # sample size train set; used to convert to rel. freq.
+index_row, index_col = np.nonzero(avf.f_mat) 
+nz_freq = avf.f_mat[index_row, index_col].reshape(n,-1)    # non-zero frequencies
+ac = np.array(avf.df_.columns.tolist())                    # feature names
+names = np.tile(ac, (n, 1))
+i = np.arange(len(nz_freq))[:, np.newaxis]                      # set new x-axis 
+j = np.argsort(nz_freq, axis=1)                              # sort freq. per row and return indices
+nz = pd.DataFrame(nz_freq, columns = avf.df_.columns)   # absolute frequencies/counts
+df_relfreq = nz/n_                                           # relative marginal frequencies
+df_filter = np.zeros(list(df_relfreq.shape), dtype=bool)     # initialize; take only 'significantly' anomalous values
+cols = list(df_relfreq.columns)             # all column names
+
+ranks = np.argsort(j, axis=1)                                # array with ranks for each observ./cell 
+avg_ranks = np.mean(ranks, axis=0)                           # avg. rank per feature 
+index_sorted_ranks = np.argsort(avg_ranks)
+
+global_feat_imp = list(np.array(cols)[index_sorted_ranks])
+
+#--------------------------------------------------------------------------
+# 'Identify' outliers, with relative freq. below threshold
+# (=decision rule)
+# Note: smallest (here) 5 features do not necesserily need to have anomalous values
+# Once identified we calculate a baseline/reference for the user
+# for numeric: use the ECDF; for categorical: mode of the pmf 
+# (see calculate_references() fct above)
+#--------------------------------------------------------------------------
+for z, col in enumerate(cols):
+    # to handle distr. with few categories
+    if not any(df_relfreq[col].values <= expl_thresholds[z]):
+        expl_thresholds[z] = min(min(df_relfreq[col].values),.8)    # to exclude minima = 1.0 (-> cannot be outliers!)   
+    
+    df_filter[:,z] = df_relfreq[col].values <= expl_thresholds[z]   
+
+df_filter_twist = df_filter[i,j]      # sorted filter of 'relevance'
+df_orig_twist = df_orig.values[i,j]  # sorted orig. values
+orig_names_twist = names[i,j]            # sorted names
+
+df_filter_twist
+df_orig_twist
+orig_names_twist
+j
+
+# Over all observation (rows) in df:
+#--------------------------------------
+for obs in range(n):
+    names_i = orig_names_twist[obs, df_filter_twist[obs,:]].tolist()
+    values_i = df_orig_twist[obs, df_filter_twist[obs,:]].tolist()
+    assert len(names_i) == len(values_i), 'Lengths of lists names_i and values_i do not match!'
+    values_str = list(map(str, values_i))
+    
+    if len(names_i) > nof_feat_expl:
+        names_i = names_i[:nof_feat_expl]
+        values_str = values_str[:nof_feat_expl]
+    if len(names_i)*len(values_str) > 0 :
+        df_orig.loc[obs, 'explanation'] = local_expl._make_explanation_string(names_i, values_i)  
+    else:   
+        df_orig.loc[obs, 'explanation'] = None   
+
+obs
+names_i
+values_i
+
+
+tester = nz_freq #[:10,:6]
+len(tester)
+tester.shape
+
+
+i = np.arange(len(tester))[:, np.newaxis]                      # set new x-axis 
+j = np.argsort(tester, axis=1)                              # sort freq. per row and return indices
+
+ranks = np.argsort(j, axis=1) 
+
+tester
+j
+ranks
+
+avg_ranks = np.mean(ranks, axis=0)
+avg_ranks
+
+ranks_global_feat_imp = pd.DataFrame(avg_ranks, index=cols, columns=['avg ranks']).sort_values(by=['avg ranks'], ascending=True)
+ranks_global_feat_imp
+
+# index_sorted_ranks = np.argsort(avg_ranks)
+# index_sorted_ranks
+
+
+# global_feat_imp = list(np.array(cols)[index_sorted_ranks])
+# global_feat_imp
+
+#list(ranks_global_feat_imp.index)
