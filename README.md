@@ -10,7 +10,7 @@ Create conda virtual environment with required packages
 ```bash
 conda env create -f env.yml
 conda activate env_bhad
-pip install -e src
+pip install -e src           # install package 
 ```
 
 ## Usage
