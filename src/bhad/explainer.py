@@ -42,13 +42,13 @@ class Explainer:
         return f"Explainer(bhad_obj = {self.avf}, discretize_obj = {self.disc})"
 
     def fit(self)-> 'Explainer':
-        self.feature_distr_, self.modes_, self.cdfs_ = self.calculate_references()
+        self.feature_distr_, self.modes_, self.cdfs_ = self._calculate_references()
         return self
 
-    def calculate_references(self)-> Tuple[dict, dict, dict]:
+    def _calculate_references(self)-> Tuple[dict, dict, dict]:
         """
         Calculate marginal frequency distr. and empirical cdfs per feature, 
-        used in model explanation. df_orig must be the train set.
+        used in model explanation. df_orig must be the train set!
         This will be shown in the explanation as a reference why an obseravtion
         may be anomalous compared to its empirical distribution
         
@@ -82,7 +82,7 @@ class Explainer:
             if isinstance(modes[c], pd._libs.interval.Interval):
                  modes[c] = round(modes[c].mid,4)
         if self.verbose: 
-            print("Marginal cdfs estimated using train set of shape {}".format(df_orig.shape))         
+            print("Marginal distributions estimated using train set of shape {}".format(df_orig.shape))         
         return feat_info, modes, cdfs
     
     
