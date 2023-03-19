@@ -186,13 +186,14 @@ class Explainer:
         #-------------------------------------------------------------
         ranks = np.argsort(j, axis=1)                                   # array with ranks for each observ./cell 
         avg_ranks = np.mean(ranks, axis=0)                              # avg. rank per feature 
-        # List feat. in desc. order of rel. importance
+
+        # List feat. in ascend. order of rel. importance
         # Note this is currently based on actual value of f_mat
         # and hence which dataset has been used in the predict method of BHAD
         # In case you want this only (or additionally for the train set), 
         # use code above for self.avf.f_mat_ (=fit method)
-        self.global_feat_imp = pd.DataFrame(avg_ranks, index=cols, columns=['avg ranks']).sort_values(by=['avg ranks'], ascending=True)
-
+        global_feat_imp = pd.DataFrame(avg_ranks, index=cols, columns=['avg ranks']).sort_values(by=['avg ranks'], ascending=False)   
+        self.global_feat_imp = len(cols) - global_feat_imp - 1                            # Importance := max(rank) - avg(rank) - 1 (starting at 0)
         #--------------------------------------------------------------------------
         # 'Identify' outliers, with relative freq. below threshold
         # (=decision rule)

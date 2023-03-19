@@ -43,6 +43,6 @@ local_expl = Explainer(pipe.named_steps['model'], pipe.named_steps['discrete']).
 
 df_train = local_expl.get_explanation(nof_feat_expl = 3)
 
-print(local_expl.global_feat_imp)         # list feat. in desc. order of rel. importance
+print(local_expl.global_feat_imp)         # List feat. in asc. order of rel. importance
 ```
 
