@@ -41,7 +41,7 @@ Get model explanations:
 ```python
 local_expl = Explainer(pipe.named_steps['model'], pipe.named_steps['discrete']).fit()
 
-df_train = local_expl.get_explanation(nof_feat_expl = 3)    # individual explanations
+local_expl.get_explanation(nof_feat_expl = 3, append = False)    # individual explanations
 
 print(local_expl.global_feat_imp)         # global explanations
 ```
