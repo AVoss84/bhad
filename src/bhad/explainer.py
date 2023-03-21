@@ -193,7 +193,7 @@ class Explainer:
         # In case you want this only (or additionally for the train set), 
         # use code above for self.avf.f_mat_ (=fit method)
         global_feat_imp = pd.DataFrame(avg_ranks, index=cols, columns=['avg ranks']).sort_values(by=['avg ranks'], ascending=False)   
-        self.global_feat_imp = (len(cols) - global_feat_imp + 1)  # Importance := max(rank) - avg(rank) (start at 0)
+        self.global_feat_imp = (global_feat_imp.max()[0] - global_feat_imp + 1)       # Importance := max(avg(rank)) - avg(rank)
         self.global_feat_imp = self.global_feat_imp/self.global_feat_imp.max()[0]     # scale to unit interval
         #--------------------------------------------------------------------------
         # 'Identify' outliers, with relative freq. below threshold
