@@ -1,9 +1,6 @@
 {
-<<<<<<< HEAD
-  "python.defaultInterpreterPath": "C:\\Users\\mn9lu5b\\AppData\\Local\\miniforge3\\envs\\env_bhad"
-=======
-  "python.defaultInterpreterPath": "/home/alexv84/anaconda3/envs/env_bhad/bin/python",
+  //"python.defaultInterpreterPath": "/home/alexv84/anaconda3/envs/env_bhad/bin/python",  
+  "python.defaultInterpreterPath": "/home/alexv84/anaconda3/envs/pypi/bin/python",  
   "python.linting.pylintEnabled": true,
   "python.linting.enabled": true
->>>>>>> dev_av2
 }
