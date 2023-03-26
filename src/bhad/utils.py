@@ -68,7 +68,7 @@ class Discretize(BaseEstimator, TransformerMixin):
     Input:
     ------
     columns: list of feature names
-    nbins: number of bins to discretize numeric features into
+    nbins: number of bins to discretize numeric features into, if None MAP estimates will be computed for each feature
     lower: optional lower value for the first bin, very often 0, e.g. amounts
     k: number of standard deviations to be used for the intervals, see k*np.std(v)  
     round_intervals: number of digits to round the intervals
@@ -80,6 +80,7 @@ class Discretize(BaseEstimator, TransformerMixin):
                  verbose : bool = True, prior_gamma : float = 0.9, prior_max_M : int = 50,  # estimate number of bins M
                  **kwargs):
         
+        super(Discretize, self).__init__()
         self.columns = columns 
         self.round_intervals = round_intervals
         self.nof_bins = nbins #-1    # there will be +/- Inf endpoints added; correct for that
@@ -104,7 +105,7 @@ class Discretize(BaseEstimator, TransformerMixin):
         #print(class_name, "destroyed")
     
     #@timer
-    def fit(self, X : pd.DataFrame)-> 'discretize':
+    def fit(self, X : pd.DataFrame)-> 'Discretize':
         
             assert isinstance(X, pd.DataFrame), 'Input X must be pandas dataframe!'
             if X.index[0] != 0:    
@@ -277,7 +278,7 @@ def freedman_diaconis(data : np.array, return_width : bool = False)-> int:
     return result
 
 
-def log_marglike_nbins(M : int, y : np.array)->float:
+def log_marglike_nbins(M : int, y : np.array)-> float:
     """
     Log posterior of number of bins M
     using conjugate Jeffreys' prior for the bin probabilities 
@@ -291,6 +292,15 @@ def log_marglike_nbins(M : int, y : np.array)->float:
 
 
 def exp_normalize(x : np.array)-> np.array:
+    """Exp-normalize trick
+    https://timvieira.github.io/blog/post/2014/02/11/exp-normalize-trick/
+
+    Args:
+        x (np.array): _description_
+
+    Returns:
+        np.array: Normalized input array
+    """
     b = x.max()
     y = np.exp(x - b)
     return y / y.sum()
@@ -317,11 +327,11 @@ def geometric_prior(M : int, gamma : float = 0.7, max_M : int = 100, log : bool 
         return P_0*(gamma**M) 
 
 
-def log_joint_post_nbins_gamma(m : int, gamma : float, y : np.array, max_M : int = 100):
-    """
-    Log joint posterior of number of bins M and gamma
-    """  
-    return log_marglike_nbins(m, y) + geometric_prior(m, gamma, max_M, log = True)
+# def log_joint_post_nbins_gamma(m : int, gamma : float, y : np.array, max_M : int = 100)-> float:
+#     """
+#     Log joint posterior of number of bins M and gamma
+#     """  
+#     return log_marglike_nbins(m, y) + geometric_prior(m, gamma, max_M, log = True)
 
 
 def bart_simpson_density(x : np.array, m : int = 4)-> np.array:
@@ -344,7 +354,7 @@ def accratio(x : np.array)-> np.array:
     return bart_simpson_density(x, m = 4) / norm.pdf(x, loc=0, scale=1)    # target/proposal  
 
 
-def rbartsim(MCsim : int = 10**4, seed : int = None, verbose : bool = True):
+def rbartsim(MCsim : int = 10**4, seed : int = None, verbose : bool = True)-> np.array:
     """
     Sample from Bart Simpson density via Accept-Reject algorithm, 
     see for example Robert, Casella
@@ -466,6 +476,7 @@ class onehot_encoder(TransformerMixin, BaseEstimator):
         Args:
             oos_token (str, optional): [description]. Defaults to 'OTHERS'.
         """
+        super(onehot_encoder, self).__init__()
         self.oos_token_ = oos_token
         self.kwargs = kwargs
         self.exclude_col = exclude_columns

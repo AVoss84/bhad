@@ -8,68 +8,37 @@ from sklearn.preprocessing import OneHotEncoder
 import bhad.utils as utils
 
 class BHAD(BaseEstimator, OutlierMixin):
-    """
-    Bayesian Histogram-based Anomaly Detector (BHAD), see [1] for details. 
-
-    Parameters
-    ----------
-    contamination : float, optional (default=0.1)
-        The amount (fraction) of contamination of the data set, i.e. the proportion
-        of outliers in the data set. Used when fitting to define the threshold
-        on the decision function.
-
-    Attributes
-    ----------
-    threshold : float
-        The outlier score threshold calculated based on the score distribution 
-        and the provided contamination argument.
-    value_counts : dictionary of str keys and pandas.Series values
-        A dictionary with column names as the keys and pandas.Series as the values. 
-        Each pandas.Series has the value count of each observation in the respective 
-        column. The observations (str) are the indices in the pandas.Series object 
-        and the counts (int) are the respective values.
-
-    Methods
-    -------
-    decision_function(self, X[, y])
-        Outlier scores of X based on algorithm centered 
-        around threshold value. 
-
-    fit(self, X[, y])
-        Fit the model. 
-
-    fit_predict(self, X[, y])
-        Performs fit on X and returns outlier labels for X. This function is 
-        sklearn compatible.
-
-    predict(self, X)
-        Predict if a particular sample is an outlier (-1 label) or not (1 label). 
-
-    score_samples(self, X)
-        Score of the samples as the outlier score calculated by summing the counts 
-        of each feature level in the dataset.
-        Although this function is consistent with the sklearn OutlierMixin class, 
-        it can not be used with sklearn pipelines (as is the case with other sk-learn 
-        outlier detector classes).
-
-    Reference:
-    ------------
-    [1] Vosseler, A. (2021): BHAD: Fast unsupervised anomaly detection using Bayesian histograms, Technical Report
-    """
 
     def __init__(self, contamination : float = 0.01, alpha : float = 1/2, exclude_col : Optional[List[str]] = [], 
-                    numeric_features : Optional[List[str]] = [], cat_features : Optional[List[str]] = [],
+                    num_features : Optional[List[str]] = [], cat_features : Optional[List[str]] = [],
                     append_score : bool = False, verbose : bool = True):
+        """
+        Bayesian Histogram-based Anomaly Detector (BHAD), see [1] for details.
+
+        Args:
+            contamination (float, optional): The amount (fraction) of contamination of the data set, i.e. the proportion
+                                             of outliers in the data set. Used when fitting to define the threshold
+                                             on the decision function. Defaults to 0.01.
+            alpha (float, optional): Hyperparamter ('pseudo counts') of the Dirirchlet prior. Defaults to 1/2.
+            exclude_col (Optional[List[str]], optional): List of column names that should be excluded from the model training. Defaults to [].
+            num_features (Optional[List[str]], optional): List of numeric feature names (will be discretized). Defaults to [].
+            cat_features (Optional[List[str]], optional): List of categorical feature names. Defaults to [].
+            append_score (bool, optional): Output input dataset with model scores appended in extra column. Defaults to False.
+            verbose (bool, optional): Show user information. Defaults to True.
         
+        Reference:
+        ------------
+        [1] Vosseler, A. (2021): BHAD: Fast unsupervised anomaly detection using Bayesian histograms, Working paper.
+        """
         super(BHAD, self).__init__()
         self.contamination = contamination              # outlier proportion in the dataset
         self.alpha = alpha                              # uniform Dirichlet prior concentration parameter used for each feature
         self.verbose = verbose
         self.append_score = append_score
-        self.numeric_features = numeric_features
+        self.numeric_features = num_features
         self.cat_features = cat_features 
         self.exclude_col = exclude_col               # list with column names in X of columns to exclude for computation of the score
-        if self.verbose : 
+        if self.verbose: 
             print("\n-- Bayesian Histogram-based Anomaly Detector (BHAD) --\n")
         
 
@@ -161,7 +130,6 @@ class BHAD(BaseEstimator, OutlierMixin):
         if self.verbose : 
             print("Fit BHAD on discretized data.")
             print(f"Input shape: {X.shape}")
-        
         self.scores = self._fast_bhad(X)
 
         if self.append_score:  

@@ -7,10 +7,9 @@ import pandas as pd
 #from pandas.api.types import (is_string_dtype, is_numeric_dtype)
 from statsmodels.distributions.empirical_distribution import ECDF
 from sklearn.utils.validation import check_is_fitted
-from tqdm.auto import tqdm       
-import bhad.utils as utils
+from tqdm.auto import tqdm   
 from bhad.model import BHAD
-from bhad.utils import Discretize
+from bhad.utils import (Discretize, timer, paste)
 
 
 class Explainer:
@@ -135,10 +134,10 @@ class Explainer:
                     values.append(val)
                 else:
                     print(name,"neither numeric nor categorical!")
-        return utils.paste(names, values, sep=': ', collapse="\n") 
+        return paste(names, values, sep=': ', collapse="\n") 
     
     
-    #@utils.timer
+    #@timer
     def get_explanation(self, thresholds : float = None, nof_feat_expl : int = 5, append : bool = True)-> pd.DataFrame:
         """ 
         Find most infrequent feature realizations based on the BHAD output.
