@@ -12,6 +12,7 @@ import bhad.utils as utils
 from bhad.model import BHAD
 from bhad.utils import Discretize
 
+
 class Explainer:
 
     def __init__(self, bhad_obj : Type['BHAD'], discretize_obj : Type['Discretize'], verbose : bool = True):
