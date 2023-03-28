@@ -43,7 +43,7 @@ from bhad.explainer import Explainer
 
 local_expl = Explainer(pipe.named_steps['model'], pipe.named_steps['discrete']).fit()
 
-local_expl.get_explanation(nof_feat_expl = 3, append = False)   # individual explanations
+local_expl.get_explanation(nof_feat_expl = 5, append = False)   # individual explanations
 
 local_expl.global_feat_imp                                      # global explanation
 ```
