@@ -17,15 +17,16 @@ pip install bhad
 For convenience these two steps can be wrapped up via a scikit-learn pipeline (optionally). 
 
 ```python
-from bhad import model, utils, explainer as expl
+from bhad.model import BHAD
+from bhad.utils import Discretize
 from sklearn.pipeline import Pipeline
 
 num_cols = [....]   # names of numeric features
 cat_cols = [....]   # categorical features
 
 pipe = Pipeline(steps=[
-   ('discrete', utils.Discretize(nbins = None)),   
-   ('model', model.BHAD(contamination = 0.01, num_features = num_cols, cat_features = cat_cols))
+   ('discrete', Discretize(nbins = None)),   
+   ('model', BHAD(contamination = 0.01, num_features = num_cols, cat_features = cat_cols))
 ])
 ```
 
@@ -38,9 +39,11 @@ y_pred = pipe.fit_predict(X = dataset)
 Get global model explanation as well as for individual observations:
 
 ```python
-local_expl = expl.Explainer(pipe.named_steps['model'], pipe.named_steps['discrete']).fit()
+from bhad.explainer import Explainer
 
-local_expl.get_explanation(nof_feat_expl = 3, append = False)   # individual explanations
+local_expl = Explainer(pipe.named_steps['model'], pipe.named_steps['discrete']).fit()
+
+local_expl.get_explanation(nof_feat_expl = 5, append = False)   # individual explanations
 
 local_expl.global_feat_imp                                      # global explanation
 ```
