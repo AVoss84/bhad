@@ -53,7 +53,7 @@ reload(model)
 from sklearn.pipeline import Pipeline
 
 pipe = Pipeline(steps=[
-    ('discrete' , utils.discretize(nbins = None, verbose = False)),      # step only needed if continous features are present
+    ('discrete' , utils.Discretize(nbins = None, verbose = False)),      # step only needed if continous features are present
     ('model', model.BHAD(contamination = 0.01))
 ])
 

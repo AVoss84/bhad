@@ -76,6 +76,7 @@ class Explainer:
                 feat_info[c] = pmfs                                # per feature, i.e. column
                 single = feat_info.get(c).pmf           
                 modes[c] = single.idxmax(axis=0, skipna=True)      # take argmax to get the x.value of the mode
+                #feat_info[c] = (pmfs.rank(method="max").sort_values(by=['pmf'])/pmfs.shape[0])                                # per feature, i.e. column
             else:
                 raise ValueError(f'Column {c} missing in provided num./cat. lists! Please check your arguments.')
 
@@ -129,6 +130,9 @@ class Explainer:
                         row = np.where(comp_aux)[0][0]
                     else:
                         row = np.where(comp)[0][0]
+                    #pmf = self.feature_distr_[name].iloc[row,:].pmf
+                    #names.append(tec2biz[name]+' (Perc.: '+str(round(pmf,3))+')')
+                    
                     pmf = self.feature_distr_[name].iloc[row,:].pmf
                     names.append(tec2biz[name]+' (Perc.: '+str(round(pmf,3))+')')
                     values.append(val)
@@ -138,7 +142,7 @@ class Explainer:
     
     
     #@timer
-    def get_explanation(self, thresholds : float = None, nof_feat_expl : int = 5, append : bool = True)-> pd.DataFrame:
+    def get_explanation(self, thresholds : List[float] = None, nof_feat_expl : int = 5, append : bool = True)-> pd.DataFrame:
         """ 
         Find most infrequent feature realizations based on the BHAD output.
         Motivation: the BHAD anomaly score is simply the unweighted average of the log probabilities
@@ -204,11 +208,21 @@ class Explainer:
         # (see calculate_references() fct above)
         #--------------------------------------------------------------------------
         for z, col in enumerate(cols):
-            # to handle distr. with few categories
-            if not any(df_relfreq[col].values <= self.expl_thresholds[z]):
-                self.expl_thresholds[z] = min(min(df_relfreq[col].values),.8)    # to exclude minima = 1.0 (-> cannot be outliers!)   
-            
-            df_filter[:,z] = df_relfreq[col].values <= self.expl_thresholds[z]   
+
+            if col in self.avf.numeric_features_:
+                x = df_orig[col].tolist()
+                # Check if indiv. values of feat. z are in left or right tail 
+                emp_ci = np.quantile(x, q=[self.expl_thresholds[z]/2, 1 - self.expl_thresholds[z]/2], interpolation="higher")
+                lower_point, upper_point = emp_ci[0], emp_ci[1] 
+                if lower_point < upper_point:
+                    df_filter[:,z] = np.logical_or(x < lower_point, x > upper_point)   
+            else:    
+                # to handle distr. with few categories
+                # hence levels will concentrate all freq. mass (e.g. degenerate)
+                if not any(df_relfreq[col].values <= self.expl_thresholds[z]):
+                    self.expl_thresholds[z] = min(min(df_relfreq[col].values),.8)    # to exclude minima = 1.0 (-> cannot be outlier!)   
+                
+                df_filter[:,z] = df_relfreq[col].values <= self.expl_thresholds[z]  
 
         df_filter_twist = df_filter[i,j]      # sorted filter of 'relevance'
         df_orig_twist = df_orig.values[i,j]  # sorted orig. values

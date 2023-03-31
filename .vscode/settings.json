@@ -1,6 +1,6 @@
 {
-  //"python.defaultInterpreterPath": "/home/alexv84/anaconda3/envs/env_bhad/bin/python",  
-  "python.defaultInterpreterPath": "/Users/alexandervosseler/conda/envs/env_bhad/bin/python",  
+  "python.defaultInterpreterPath": "/home/alexv84/anaconda3/envs/env_bhad/bin/python",  
+  //"python.defaultInterpreterPath": "/Users/alexandervosseler/conda/envs/env_bhad/bin/python",  
   //"python.defaultInterpreterPath": "/home/alexv84/anaconda3/envs/pypi/bin/python",  
   "python.linting.pylintEnabled": true,
   "python.linting.enabled": true
