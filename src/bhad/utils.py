@@ -77,8 +77,7 @@ class Discretize(BaseEstimator, TransformerMixin):
     """
     def __init__(self, columns : List[str] = [], nbins : int = None, lower : float = None, k : int = 1, 
                  round_intervals : int = 5, eps : float = .001, make_labels : bool = False, 
-                 verbose : bool = True, prior_gamma : float = 0.9, prior_max_M : int = 50,  # estimate number of bins M
-                 **kwargs):
+                 verbose : bool = True, prior_gamma : float = 0.9, prior_max_M : int = None,  **kwargs):
         
         super(Discretize, self).__init__()
         self.columns = columns 
@@ -108,6 +107,14 @@ class Discretize(BaseEstimator, TransformerMixin):
     def fit(self, X : pd.DataFrame)-> 'Discretize':
         
             assert isinstance(X, pd.DataFrame), 'Input X must be pandas dataframe!'
+
+            if self.prior_max_M is None:
+                # Square root choice:
+                h_sq = np.ceil(np.sqrt(X.shape[0]))
+                self.prior_max_M = min(int(.3*X.shape[0]), int(h_sq))
+                if self.verbose:
+                    print(f"Setting maximum number of bins {self.prior_max_M }.")
+
             if X.index[0] != 0:    
                 X.reset_index(drop=True, inplace=True)     # Need this to conform with 0...n-1 index in explainer and elsewhere 
                 if self.verbose: 
