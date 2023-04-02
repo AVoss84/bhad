@@ -148,7 +148,8 @@ class Discretize(BaseEstimator, TransformerMixin):
                         # Compute K_MAP for each feature:
                         #---------------------------------
                         self.nbins = max(lpr, key=lpr.get)    
-                        if self.verbose: print('Feature {} using {} bins'.format(col, self.nbins))
+                        if self.verbose: 
+                            print('Feature {} using {} bins'.format(col, self.nbins))
                     
                     # Add some low variance white noise 
                     # to make bins unique (thus more robust):
