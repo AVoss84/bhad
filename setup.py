@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf8") as fh:
 
 setup(
     name='bhad',                            # This is the name of the package-distribution (as shown on pypi)
-    version='0.0.6',                               # The release version
+    version='0.0.7',                               # The release version
     author="Alexander Vosseler",                   # Full name of the author
     maintainer = "Alexander Vosseler",
     url='https://github.com/AVoss84/bhad',

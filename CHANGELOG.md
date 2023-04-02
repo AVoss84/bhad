@@ -29,8 +29,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - add global model explanations
 
 
-## [0.0.6]
+## [0.0.7]
 ### Change threshold logic in explainer
 - once most relevant features are determined for local explanations, compute univariate ECDFs for each continuous feature (based on org. scales). 
 Then compute the empirical (1-p)% confidence interval of the observations. 
 If an observation is not an element of that interval consider it as relevant (w.r.t. anomaly score expl.)     
+- Readme.md change 
