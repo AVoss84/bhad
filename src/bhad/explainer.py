@@ -16,7 +16,7 @@ class Explainer:
 
     def __init__(self, bhad_obj : Type['BHAD'], discretize_obj : Type['Discretize'], verbose : bool = True):
         """
-        Create model explanations per observation 
+        Create model explanations per observation. 
         Args:
             bhad_obj (sklearn estimator): fitted bhad class instance 
                                          that cointains all relevant attributes
@@ -166,9 +166,11 @@ class Explainer:
             self.expl_thresholds = [.2]*self.avf.df_.shape[1]
         else:
             self.expl_thresholds = thresholds
+            if self.verbose:
+                print("Using custom thresholds.")
 
         nof_feat_expl = max(nof_feat_expl, 1)     # use at least one feature for explanation   
-
+        #-----------------------------
         # Use statistics in f_mat 
         # based on data in predict:
         #-----------------------------
@@ -217,7 +219,7 @@ class Explainer:
                 if lower_point < upper_point:
                     df_filter[:,z] = np.logical_or(x < lower_point, x > upper_point)   
             else:    
-                # to handle distr. with few categories
+                # To handle distr. with few categories
                 # hence levels will concentrate all freq. mass (e.g. degenerate)
                 if not any(df_relfreq[col].values <= self.expl_thresholds[z]):
                     self.expl_thresholds[z] = min(min(df_relfreq[col].values),.8)    # to exclude minima = 1.0 (-> cannot be outlier!)   
