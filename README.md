@@ -48,4 +48,4 @@ local_expl.get_explanation(nof_feat_expl = 5, append = False)   # individual exp
 local_expl.global_feat_imp                                      # global explanation
 ```
 
-A detailed toy example using synthetic data for anomaly detection can be found [here](src/notebooks/Toy_Example.ipynb) and an example using the Titanic dataset to illustrating model explanability can be found [here](src/notebooks/Titanic_Example.ipynb).
+A detailed toy example using synthetic data for anomaly detection can be found [here](src/notebooks/Toy_Example.ipynb) and an example using the Titanic dataset illustrating model explanability can be found [here](src/notebooks/Titanic_Example.ipynb).
