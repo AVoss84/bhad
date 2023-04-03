@@ -107,18 +107,19 @@ class Discretize(BaseEstimator, TransformerMixin):
     def fit(self, X : pd.DataFrame)-> 'Discretize':
         
             assert isinstance(X, pd.DataFrame), 'Input X must be pandas dataframe!'
-
+            # Set a maximum number of bins [1,max_M]:
             if self.prior_max_M is None:
                 # Square root choice:
+                # https://en.wikipedia.org/wiki/Histogram
                 h_sq = np.ceil(np.sqrt(X.shape[0]))
-                self.prior_max_M = min(int(.3*X.shape[0]), int(h_sq))
+                self.prior_max_M = min(250, int(h_sq))
                 if self.verbose:
                     print(f"Setting maximum number of bins {self.prior_max_M }.")
 
             if X.index[0] != 0:    
                 X.reset_index(drop=True, inplace=True)     # Need this to conform with 0...n-1 index in explainer and elsewhere 
                 if self.verbose: 
-                    print("Reseting index of input dataframe.")    
+                    print("Resetting index of input dataframe.")    
             df_new = deepcopy(X)
             self.nbins = self.nof_bins    # initialize (might be changed in case of low variance features) 
             self.cat_columns = df_new.select_dtypes(include=['object','category']).columns.tolist()  # categorical (for later reference in postproc.)
