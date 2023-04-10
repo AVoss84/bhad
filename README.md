@@ -1,6 +1,6 @@
 # Bayesian Histogram-based Anomaly Detection (BHAD)
 
-Python implementation of the BHAD algorithm as presented in [Vosseler, A. (2022): Unsupervised Insurance Fraud Prediction Based on Anomaly Detector Ensembles, Risks, 10(7), 132](https://www.mdpi.com/2227-9091/10/7/132) and [Vosseler, A. (2022): BHAD: Fast unsupervised anomaly detection using Bayesian histograms](https://www.researchgate.net/publication/364265660_BHAD_Fast_unsupervised_anomaly_detection_using_Bayesian_histograms). The code follows scikit-learn's standard API for [outlier detection](https://scikit-learn.org/stable/modules/outlier_detection.html). 
+Python implementation of the BHAD algorithm as presented in [Vosseler, A. (2022): Unsupervised Insurance Fraud Prediction Based on Anomaly Detector Ensembles, Risks, 10(7), 132](https://www.mdpi.com/2227-9091/10/7/132) and [Vosseler, A. (2022): BHAD: Explainable anomaly detection using Bayesian histograms](https://www.researchgate.net/publication/364265660_BHAD_Fast_unsupervised_anomaly_detection_using_Bayesian_histograms). The code follows scikit-learn's standard API for [outlier detection](https://scikit-learn.org/stable/modules/outlier_detection.html). 
 
 ## Installation
 
