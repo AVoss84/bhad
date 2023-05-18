@@ -1,5 +1,5 @@
 import os, sys, warnings, functools, math, time
-from typing import (List, Tuple)
+from typing import (List, Tuple, Dict)
 import numpy as np
 import pandas as pd
 from pandas.api.types import CategoricalDtype
@@ -103,6 +103,26 @@ class Discretize(BaseEstimator, TransformerMixin):
         class_name = self.__class__.__name__
         #print(class_name, "destroyed")
     
+    def log_post_pmf_nof_bins(self, feature_values : np.array)-> Dict[int, float]:
+        """
+        Evaluate log posterior prob. measure of number of bins (over grid of supported values)
+        see paper section 'posteriors'.
+
+        Args:
+            feature_values (np.array): univariate variable values
+
+        Returns:
+            Dict[int, float]: grid of number of bin values with log-pmf values
+        """
+        # 'Integrate out' out hyperparameter gamma from joint prior via Simpson's rule:
+        #-------------------------------------------------------------------------------
+        log_marg_prior_nbins = {m : np.log(1e-10 + simpson(np.array([geometric_prior(M = m, gamma = g, max_M = self.prior_max_M, log = False) for g in self.gamma_grid]), self.gamma_grid)) for m in range(1, self.prior_max_M, 1)}
+        
+        # Evaluate log posterior prob. measure of number of bins (over grid of supported values):
+        #----------------------------------------------------------------------------------------
+        return {m : log_marg_prior_nbins[m] + log_marglike_nbins(M = m, y = feature_values) for m in range(1,self.prior_max_M, 1)}
+
+    
     #@timer
     def fit(self, X : pd.DataFrame)-> 'Discretize':
         
@@ -131,8 +151,7 @@ class Discretize(BaseEstimator, TransformerMixin):
                 print(f"Used {len(self.columns)} numeric feature(s) and {len(self.cat_columns)} categorical feature(s).")      
 
             df_new[self.columns] = df_new[self.columns].astype(float)        
-            ptive_inf = float ('inf')
-            ntive_inf = float('-inf')
+            ptive_inf, ntive_inf = float ('inf'), float('-inf')
             self.df_orig = deepcopy(df_new[self.columns + self.cat_columns])   # train data with non-discretized values for numeric features for model explainer
 
             for col in self.columns:
@@ -147,12 +166,10 @@ class Discretize(BaseEstimator, TransformerMixin):
                         #print(f'FD rule: {freedman_diaconis(v)}')
                         #print(f'Sturges: {1 + ceil(np.log2(len(v)))}')
                         
-                        # Evaluate log joint posterior of grid of number of bin values:
-                        #---------------------------------------------------------------
-                        log_marg_prior_nbins = {m : np.log(1e-10 + simpson(np.array([geometric_prior(M = m, gamma = g, max_M = self.prior_max_M, log = False) for g in self.gamma_grid]), self.gamma_grid)) for m in range(1, self.prior_max_M, 1)}
-                        
-                        lpr = {m : log_marg_prior_nbins[m] + log_marglike_nbins(M = m, y = v) for m in range(1,self.prior_max_M, 1)}
-                      
+                        # Evaluate log posterior prob. measure of number of bins:
+                        #---------------------------------------------------------
+                        lpr = self.log_post_pmf_nof_bins(feature_values = v)
+
                         # Compute K_MAP for each feature:
                         #---------------------------------
                         self.nbins = max(lpr, key=lpr.get)    
@@ -533,9 +550,9 @@ class onehot_encoder(TransformerMixin, BaseEstimator):
  
         df = deepcopy(X[self.selected_col])
         ohm = np.zeros((df.shape[0],len(self.columns_)))
-        for r, my_tuple in enumerate(df.itertuples(index=False)):    # loop over rows
+        for r, my_tuple in enumerate(df.itertuples(index=False)):    # loop over rows (slow)
             my_index = []
-            for z, col in enumerate(df.columns):
+            for z, col in enumerate(df.columns):              # loop over columns
                 raw_level_list = list(self.value2name_[col].keys())
                 mask = my_tuple[z] == np.array(raw_level_list)
                 if any(mask): 
