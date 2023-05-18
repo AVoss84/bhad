@@ -1,9 +1,9 @@
-import os, sys, warnings, functools, math, time
+import os, warnings, functools, time
 from typing import (List, Tuple, Dict)
 import numpy as np
 import pandas as pd
 from pandas.api.types import CategoricalDtype
-from sklearn.base import BaseEstimator, OutlierMixin, TransformerMixin
+from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.utils.validation import check_is_fitted
 #from sklearn.preprocessing import OneHotEncoder
 from scipy.special import loggamma
@@ -17,7 +17,7 @@ from copy import deepcopy
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from functools import wraps
-from tqdm.auto import tqdm   
+#from tqdm.auto import tqdm   
 
 
 # timer decorator for any function func:
