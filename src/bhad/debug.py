@@ -80,10 +80,59 @@ y_pred_test = pipe.predict(X_test)
 scores_test = pipe.decision_function(X_test)
 #---------------------------------------------
 
-disc = util.discretize(nbins = None, verbose = False)
+
+disc = utils.Discretize(nbins = None, verbose = False)
 X_tilde = disc.fit_transform(X_train)
 
-model = bhad_old.BHAD(contamination = 0.01)
+reload(utils)
+
+oh = utils.onehot_encoder()
+enc = oh.fit(X_tilde)
+
+enc
+X = X_tilde
+
+selected_col = X.columns[~X.columns.isin(enc.exclude_col)]
+
+df = X[enc.selected_col]
+
+ohm = np.zeros((df.shape[0],len(enc.columns_)))
+
+cont = df.itertuples(index=False)
+type(cont)
+
+
+for r, my_tuple in enumerate(df.itertuples(index=False)):    # loop over rows (slow)
+    my_index = []
+    for z, col in enumerate(df.columns):              # loop over columns
+        raw_level_list = list(enc.value2name_[col].keys())
+        mask = my_tuple[z] == np.array(raw_level_list)
+        if any(mask): 
+            index = np.where(mask)[0][0]
+            dummy_name = enc.value2name_[col][raw_level_list[index]]
+        else:
+            dummy_name = col + enc.prefix_sep_ + enc.oos_token_
+        my_index.append(enc.names2index_[dummy_name])
+    targets = np.array(my_index).reshape(-1)
+    ohm[r,targets] = 1    
+
+
+def helper(enc):
+
+    my_index = []
+    for z, col in enumerate(df.columns):              # loop over columns
+        raw_level_list = list(enc.value2name_[col].keys())
+        mask = my_tuple[z] == np.array(raw_level_list)
+        if any(mask): 
+            index = np.where(mask)[0][0]
+            dummy_name = enc.value2name_[col][raw_level_list[index]]
+        else:
+            dummy_name = col + enc.prefix_sep_ + enc.oos_token_
+        my_index.append(enc.names2index_[dummy_name])
+
+
+
+""" model = bhad_old.BHAD(contamination = 0.01)
 
 y_pred_train = model.fit_predict(X_tilde)   
 scores_train = model.decision_function(X_tilde) 
@@ -131,4 +180,4 @@ log_pred = np.log((pipe.alphas + freq_updated_)/np.sum(pipe.alphas + pipe.freq_u
 f_mat = freq_updated_ * df_one           # get level specific counts for X, e.g. test set
 f_mat_bayes = log_pred * df_one  
 scores = pd.Series(np.apply_along_axis(np.sum, 1, f_mat_bayes), index=X.index) 
-scores
+scores """

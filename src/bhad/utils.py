@@ -102,6 +102,9 @@ class Discretize(BaseEstimator, TransformerMixin):
     def __del__(self):
         class_name = self.__class__.__name__
         #print(class_name, "destroyed")
+
+    def __repr__(self):
+        return f"Discretize(columns = {self.columns}, nbins = {self.nof_bins}, lower = {self.lower}, k = {self.k}, round_intervals = {self.round_intervals}, eps = {self.eps}, make_labels = {self.make_labels}, prior_gamma = {self.prior_gamma}, prior_max_M = {self.prior_max_M}, verbose = {self.verbose})"
     
     def log_post_pmf_nof_bins(self, feature_values : np.array)-> Dict[int, float]:
         """
@@ -115,11 +118,9 @@ class Discretize(BaseEstimator, TransformerMixin):
             Dict[int, float]: grid of number of bin values with log-pmf values
         """
         # 'Integrate out' out hyperparameter gamma from joint prior via Simpson's rule:
-        #-------------------------------------------------------------------------------
         log_marg_prior_nbins = {m : np.log(1e-10 + simpson(np.array([geometric_prior(M = m, gamma = g, max_M = self.prior_max_M, log = False) for g in self.gamma_grid]), self.gamma_grid)) for m in range(1, self.prior_max_M, 1)}
         
         # Evaluate log posterior prob. measure of number of bins (over grid of supported values):
-        #----------------------------------------------------------------------------------------
         return {m : log_marg_prior_nbins[m] + log_marglike_nbins(M = m, y = feature_values) for m in range(1,self.prior_max_M, 1)}
 
     
@@ -511,6 +512,9 @@ class onehot_encoder(TransformerMixin, BaseEstimator):
         self.unique_categories_, self.value2name_ = dict(), dict()
         if self.verbose : 
             print("One-hot encoding categorical features.")
+        
+    def __repr__(self):
+        return f"onehot_encoder(exclude_columns = {self.exclude_col}, prefix_sep = {self.prefix_sep_}, oos_token = {self.oos_token_}, verbose = {self.verbose})"
 
     #@timer
     def fit(self, X: pd.DataFrame)-> 'onehot_encoder':
