@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from importlib import reload
 
+
 seed = 42  
 outlier_prob_true = .01         # probab. for outlier ; should be consistent with contamination rate in your model
 k = 30                          # feature dimension 
@@ -96,10 +97,55 @@ selected_col = X.columns[~X.columns.isin(enc.exclude_col)]
 
 df = X[enc.selected_col]
 
+df.head()
+
 ohm = np.zeros((df.shape[0],len(enc.columns_)))
 
-cont = df.itertuples(index=False)
-type(cont)
+loop1 = enumerate(df.itertuples(index=False))
+
+r, my_tuple = next(loop1)
+r, my_tuple
+
+
+loop2 = enumerate(df.columns)
+
+z, col = next(loop2)
+z, col
+
+raw_level_list = list(enc.value2name_[col].keys())
+raw_level_list
+
+mask = my_tuple[z] == np.array(raw_level_list)
+mask
+
+
+def test(my_tuple, value2name_, df_columns, oos_token_, prefix_sep_, names2index_):
+    
+    #ohm = np.zeros((1,len(enc.columns_)))
+    my_index = []
+    for z, col in enumerate(df_columns): 
+
+        raw_level_list = list(value2name_[col].keys())
+        mask = my_tuple[z] == np.array(raw_level_list)
+        if any(mask): 
+            index = np.where(mask)[0][0]
+            dummy_name = value2name_[col][raw_level_list[index]]
+        else:
+            dummy_name = col + prefix_sep_ + oos_token_
+        my_index.append(names2index_[dummy_name])
+    targets = np.array(my_index).reshape(-1)
+    return targets
+
+r, my_tuple = next(loop1)
+
+##
+test(my_tuple, value2name_ = enc.value2name_, df_columns = df.columns, oos_token_ = enc.oos_token_, prefix_sep_ = enc.prefix_sep_, names2index_ = enc.names2index_)
+
+
+
+
+for r, my_tuple in enumerate(df.itertuples(index=False)): 
+    print(my_tuple)
 
 
 for r, my_tuple in enumerate(df.itertuples(index=False)):    # loop over rows (slow)
