@@ -121,8 +121,8 @@ mask = my_tuple[z] == np.array(raw_level_list)
 mask
 
 
-def test(self, x, df_columns):
-
+def single_row(self, x, df_columns):
+    """Run over all columns for single row"""
     my_index = []
     ohm = np.zeros((len(enc.columns_)), dtype=np.int8)
     for z, col in enumerate(df_columns): 
