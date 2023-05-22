@@ -570,6 +570,25 @@ class onehot_encoder(TransformerMixin, BaseEstimator):
         return csr_matrix(ohm) 
         
 
+    def single_row(self, my_tuple : pd.DataFrame, df_columns : List[str])-> np.array:
+        """Run over all columns for single row"""
+        my_index = []
+        ohm = np.zeros((len(self.columns_)), dtype=np.int8)
+        for z, col in enumerate(df_columns): 
+
+            raw_level_list = list(self.value2name_[col].keys())
+            mask = my_tuple[z] == np.array(raw_level_list)
+            if any(mask): 
+                index = np.where(mask)[0][0]
+                dummy_name = self.value2name_[col][raw_level_list[index]]
+            else:
+                dummy_name = col + self.prefix_sep_ + self.oos_token_
+            my_index.append(self.names2index_[dummy_name])
+
+        targets = np.array(my_index).reshape(-1)
+        ohm[targets] = 1
+        return ohm
+
     def get_feature_names_out(self, input_features : list = None)-> np.array: 
         """
         Get feature names as used in one-hot encoder, 

@@ -107,7 +107,7 @@ loop1 = enumerate(df.itertuples(index=False))
 
 r, my_tuple = next(loop1)
 r, my_tuple
-
+type(my_tuple)
 
 loop2 = enumerate(df.columns)
 
