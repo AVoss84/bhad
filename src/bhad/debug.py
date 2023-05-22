@@ -91,6 +91,7 @@ oh = utils.onehot_encoder()
 enc = oh.fit(X_tilde)
 
 enc
+
 X = X_tilde
 
 selected_col = X.columns[~X.columns.isin(enc.exclude_col)]
@@ -119,30 +120,42 @@ mask = my_tuple[z] == np.array(raw_level_list)
 mask
 
 
-def test(my_tuple, value2name_, df_columns, oos_token_, prefix_sep_, names2index_):
+def test(x, self, df_columns):
     
     #ohm = np.zeros((1,len(enc.columns_)))
     my_index = []
     for z, col in enumerate(df_columns): 
 
-        raw_level_list = list(value2name_[col].keys())
-        mask = my_tuple[z] == np.array(raw_level_list)
+        raw_level_list = list(self.value2name_[col].keys())
+        mask = x[z] == np.array(raw_level_list)
         if any(mask): 
             index = np.where(mask)[0][0]
-            dummy_name = value2name_[col][raw_level_list[index]]
+            dummy_name = self.value2name_[col][raw_level_list[index]]
         else:
-            dummy_name = col + prefix_sep_ + oos_token_
-        my_index.append(names2index_[dummy_name])
+            dummy_name = col + self.prefix_sep_ + self.oos_token_
+        my_index.append(self.names2index_[dummy_name])
     targets = np.array(my_index).reshape(-1)
     return targets
 
 r, my_tuple = next(loop1)
 
 ##
-test(my_tuple, value2name_ = enc.value2name_, df_columns = df.columns, oos_token_ = enc.oos_token_, prefix_sep_ = enc.prefix_sep_, names2index_ = enc.names2index_)
+test(x = my_tuple, df_columns = df.columns, self = enc)
+
+for r, my_tuple in enumerate(df.itertuples(index=False)): 
+    print(r, test(x = my_tuple, df_columns = df.columns, self = enc))
+
+df.shape
+
+targets = df.apply(lambda row: test(x = row, df_columns = df.columns, self = enc), axis=1)
+targets.values.reshape(df.shape[0],-1).shape
+
+ohm = np.zeros((1,len(enc.columns_)))
+ohm.shape
 
 
 
+ohm[:,targets.values[0]]
 
 for r, my_tuple in enumerate(df.itertuples(index=False)): 
     print(my_tuple)
