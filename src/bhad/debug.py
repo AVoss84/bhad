@@ -120,9 +120,8 @@ mask = my_tuple[z] == np.array(raw_level_list)
 mask
 
 
-def test(x, self, df_columns):
+def test(self, x, df_columns):
     
-    #ohm = np.zeros((1,len(enc.columns_)))
     my_index = []
     for z, col in enumerate(df_columns): 
 
@@ -134,8 +133,8 @@ def test(x, self, df_columns):
         else:
             dummy_name = col + self.prefix_sep_ + self.oos_token_
         my_index.append(self.names2index_[dummy_name])
-    targets = np.array(my_index).reshape(-1)
-    return targets
+
+    return np.array(my_index).reshape(-1)
 
 r, my_tuple = next(loop1)
 
@@ -148,7 +147,7 @@ for r, my_tuple in enumerate(df.itertuples(index=False)):
 df.shape
 
 targets = df.apply(lambda row: test(x = row, df_columns = df.columns, self = enc), axis=1)
-targets.values.reshape(df.shape[0],-1).shape
+targets #.values.reshape(df.shape[0],-1).shape
 
 ohm = np.zeros((1,len(enc.columns_)))
 ohm.shape
