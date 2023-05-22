@@ -88,10 +88,12 @@ X_tilde = disc.fit_transform(X_train)
 reload(utils)
 
 oh = utils.onehot_encoder()
-enc = oh.fit(X_tilde)
+oh.fit(X_tilde)
+
+ohm = oh.transform(X_tilde)
+ohm
 
 enc
-
 X = X_tilde
 
 selected_col = X.columns[~X.columns.isin(enc.exclude_col)]
@@ -121,7 +123,6 @@ mask
 
 
 def test(self, x, df_columns):
-    
     my_index = []
     for z, col in enumerate(df_columns): 
 
@@ -133,16 +134,57 @@ def test(self, x, df_columns):
         else:
             dummy_name = col + self.prefix_sep_ + self.oos_token_
         my_index.append(self.names2index_[dummy_name])
-
     return np.array(my_index).reshape(-1)
+    #return my_index
 
 r, my_tuple = next(loop1)
 
 ##
 test(x = my_tuple, df_columns = df.columns, self = enc)
 
+ohm = np.zeros((df.shape[0],len(enc.columns_)))
+targets = []
 for r, my_tuple in enumerate(df.itertuples(index=False)): 
     print(r, test(x = my_tuple, df_columns = df.columns, self = enc))
+    tar = test(x = my_tuple, df_columns = df.columns, self = enc)
+    targets.append(tar)
+    #ohm[r,tar] = 1
+
+targets
+
+ohm.shape
+df.shape
+
+targets = df.apply(lambda row: test(x = row, df_columns = df.columns, self = enc), axis=1)
+targets.values #.values.reshape(df.shape[0],-1).shape
+
+#index_mat = np.array(targets.tolist())
+
+index_mat = np.stack(targets.values)
+index_mat
+
+targets[20]
+
+#ohm = np.zeros((index_mat.shape))
+ohm = np.zeros((df.shape[0],len(enc.columns_)))
+for r in range(index_mat.shape[0]):
+    ohm[r,targets[r]] = 1
+ohm
+
+tuple(targets)
+ohm[tuple(targets)] 
+
+
+index_mat.shape
+index_mat
+
+ohm = np.zeros((index_mat.shape))
+#ohm = np.zeros((df.shape[0],len(enc.columns_)))
+ohm.shape
+
+#np.arange(0,index_mat.shape[0])
+ohm[:,index_mat] = 1
+ohm.sum(axis=1)
 
 df.shape
 
@@ -154,7 +196,7 @@ ohm.shape
 
 
 
-ohm[:,targets.values[0]]
+
 
 for r, my_tuple in enumerate(df.itertuples(index=False)): 
     print(my_tuple)
