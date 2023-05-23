@@ -542,34 +542,6 @@ class onehot_encoder(TransformerMixin, BaseEstimator):
         self.X_ = df
         return self    
 
-    # @timer
-    # def transform(self, X: pd.DataFrame)-> csr_matrix:
-        
-    #     check_is_fitted(self)        # Check if fit had been called
-    #     self.selected_col = X.columns[~X.columns.isin(self.exclude_col)]
-
-    #     # If you already have it from fit then just output it
-    #     if hasattr(self, 'X_') and self.X_.equals(X):
-    #         return self.dummyX_
- 
-    #     df = X[self.selected_col].copy()
-
-    #     ohm = np.zeros((df.shape[0],len(self.columns_)))
-    #     for r, my_tuple in enumerate(df.itertuples(index=False)):    # loop over rows (slow)
-    #         my_index = []
-    #         for z, col in enumerate(df.columns):              # loop over columns
-    #             raw_level_list = list(self.value2name_[col].keys())
-    #             mask = my_tuple[z] == np.array(raw_level_list)
-    #             if any(mask): 
-    #                 index = np.where(mask)[0][0]
-    #                 dummy_name = self.value2name_[col][raw_level_list[index]]
-    #             else:
-    #                 dummy_name = col + self.prefix_sep_ + self.oos_token_
-    #             my_index.append(self.names2index_[dummy_name])
-    #         targets = np.array(my_index).reshape(-1)
-    #         ohm[r,targets] = 1    
-    #     return csr_matrix(ohm) 
-
     #@timer
     def transform(self, X: pd.DataFrame)-> csr_matrix:
         """Map X values to respective bins and encode as one-hot
