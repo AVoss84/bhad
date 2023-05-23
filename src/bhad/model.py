@@ -1,5 +1,5 @@
 from typing import (List, Optional, Union)
-from copy import deepcopy
+#from copy import deepcopy
 import warnings
 import pandas as pd
 import numpy as np
@@ -62,7 +62,7 @@ class BHAD(BaseEstimator, OutlierMixin):
         if len(self.exclude_col)>0:
                 print("Features",self.exclude_col, 'excluded.')  
             
-        df = deepcopy(X[selected_col].astype(object)) 
+        df = X[selected_col].astype(object).copy() 
         self.df_shape = df.shape  
         self.columns = df.select_dtypes(include=['object', 'category']).columns.tolist()  # use only categorical (including discretized numerical)
         if len(self.columns)!= self.df_shape[1] : 
@@ -81,7 +81,7 @@ class BHAD(BaseEstimator, OutlierMixin):
         self.columns_onehot_ = self.enc.get_feature_names_out()
         
         # Prior parameters and sufficient statistics:
-        #----------------------------------------------
+        #---------------------------------------------
         self.alphas = np.array([self.alpha]*self.df_one.shape[1])           # Dirichlet concentration parameters; aka pseudo counts
         self.freq = self.df_one.sum(axis=0)                                 # suff. statistics of multinomial likelihood
         self.log_pred = np.log((self.alphas + self.freq)/np.sum(self.alphas + self.freq))  # log posterior predictive probabilities for single trial / multinoulli
@@ -168,7 +168,7 @@ class BHAD(BaseEstimator, OutlierMixin):
         if self.verbose : 
             print("\nScore input data.")
             print("Apply fitted one-hot encoder.")        
-        df = deepcopy(X)    
+        df = X.copy()    
         self.df_one = self.enc_.transform(df).toarray()     # apply fitted one-hot encoder to categorical -> sparse dummy matrix
         assert all(np.sum(self.df_one, axis=1) == df.shape[1]), 'Row sums must be equal to number of features!!'
         
@@ -184,7 +184,7 @@ class BHAD(BaseEstimator, OutlierMixin):
 
         # If you already have it from fit then just output it:
         if hasattr(self, 'X_') and X.equals(self.X_):    
-            self.f_mat = deepcopy(self.f_mat_)    # current f_mat (here based on X_train)
+            self.f_mat = self.f_mat_.copy()    # current f_mat (here based on X_train)
             return self.scores_
         else:    
             return self.scores

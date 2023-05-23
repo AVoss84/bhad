@@ -8,7 +8,7 @@ from importlib import reload
 seed = 42  
 outlier_prob_true = .01         # probab. for outlier ; should be consistent with contamination rate in your model
 k = 30                          # feature dimension 
-N = 2*10**3                     # sample size
+N = 2*10**4                     # sample size
 
 # Specify first and second moments for each component  
 bvt = utils.mvt2mixture(thetas = {'mean1' : np.full(k,-1), 'mean2' : np.full(k,.5), 
@@ -65,6 +65,8 @@ print(np.unique(y_train, return_counts=True))
 print(np.unique(y_test, return_counts=True))
 
 
+reload(utils)
+
 from sklearn.pipeline import Pipeline
 
 pipe = Pipeline(steps=[
@@ -85,13 +87,96 @@ scores_test = pipe.decision_function(X_test)
 disc = utils.Discretize(nbins = None, verbose = False)
 X_tilde = disc.fit_transform(X_train)
 
+#-------------------------------------------------------
 reload(utils)
 
-oh = utils.onehot_encoder()
+oh = utils.onehot_encoder(prefix_sep='__')
 enc = oh.fit(X_tilde)
 
-ohm = oh.transform(X_tilde)
-ohm
+ohm = oh.transform(X_tilde).toarray()  
+
+ohm.sum(axis=1)
+
+#----------------------------------------------------------
+import pandas as pd
+from copy import deepcopy
+
+# Own:
+@utils.timer
+def transform(self, X: pd.DataFrame):
+    
+    #check_is_fitted(self)        # Check if fit had been called
+    self.selected_col = X.columns[~X.columns.isin(self.exclude_col)]
+
+    # If you already have it from fit then just output it
+    if hasattr(self, 'X_') and self.X_.equals(X):
+        return self.dummyX_
+
+    df = deepcopy(X[self.selected_col])
+    # ohm_aux = df.apply(lambda row: self._single_row(my_tuple = row, df_columns = df.columns), axis=1)
+    # ohm = np.stack(ohm_aux.values)
+    # return ohm
+
+    ohm = np.zeros((df.shape[0],len(self.columns_)))
+    for r, my_tuple in enumerate(df.itertuples(index=False)):    # loop over rows (slow)
+        my_index = []
+        for z, col in enumerate(df.columns):              # loop over columns
+            raw_level_list = list(self.value2name_[col].keys())
+            mask = my_tuple[z] == np.array(raw_level_list)
+            if any(mask): 
+                index = np.where(mask)[0][0]
+                dummy_name = self.value2name_[col][raw_level_list[index]]
+            else:
+                dummy_name = col + self.prefix_sep_ + self.oos_token_
+            my_index.append(self.names2index_[dummy_name])
+        targets = np.array(my_index).reshape(-1)
+        ohm[r,targets] = 1    
+    return ohm
+
+#-------------------------------------------------------------
+
+# ChatGPT:
+@utils.timer
+def transform_gpt(self, X: pd.DataFrame):
+    self.selected_col = X.columns[~X.columns.isin(self.exclude_col)]
+
+    # If you already have it from fit then just output it
+    if hasattr(self, 'X_') and self.X_.equals(X):
+        return self.dummyX_
+
+    df = deepcopy(X[self.selected_col])
+
+    ohm = np.zeros((df.shape[0], len(self.columns_)))
+
+    for z, col in enumerate(df.columns):
+        raw_level_list = np.array(list(self.value2name_[col].keys()))
+        mask = np.isin(df[col].values, raw_level_list)
+
+        masked_values = df[col].values[mask]
+        dummy_names = np.array([self.value2name_[col][value] for value in masked_values])
+        oos_dummy_name = col + self.prefix_sep_ + self.oos_token_
+
+        my_index = np.array([self.names2index_.get(dummy_name, self.names2index_[oos_dummy_name]) for dummy_name in dummy_names])
+
+        ohm[np.arange(df.shape[0])[mask], my_index] = 1
+
+    return ohm
+
+#----------------------------------------------------------
+
+df_one = transform(self = enc, X = X_tilde)
+
+df_one_gpt = transform_gpt(self = enc, X = X_tilde)
+
+np.all(df_one == df_one_gpt)
+
+#--------------------------------------------------------------
+
+df_one_gpt.sum(axis=1)
+
+np.all(df_one_gpt.sum(axis=1) > 0)
+
+
 
 X = X_tilde
 

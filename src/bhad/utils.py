@@ -13,7 +13,6 @@ from scipy.stats import wishart, bernoulli, norm
 #from scipy.stats import t as student
 from scipy.optimize import minimize_scalar
 #from math import floor, ceil
-from copy import deepcopy
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from functools import wraps
@@ -141,7 +140,7 @@ class Discretize(BaseEstimator, TransformerMixin):
                 X.reset_index(drop=True, inplace=True)     # Need this to conform with 0...n-1 index in explainer and elsewhere 
                 if self.verbose: 
                     print("Resetting index of input dataframe.")    
-            df_new = deepcopy(X)
+            df_new = X.copy()
             self.nbins = self.nof_bins    # initialize (might be changed in case of low variance features) 
             self.cat_columns = df_new.select_dtypes(include=['object','category']).columns.tolist()  # categorical (for later reference in postproc.)
             if not self.columns:
@@ -153,7 +152,7 @@ class Discretize(BaseEstimator, TransformerMixin):
 
             df_new[self.columns] = df_new[self.columns].astype(float)        
             ptive_inf, ntive_inf = float ('inf'), float('-inf')
-            self.df_orig = deepcopy(df_new[self.columns + self.cat_columns])   # train data with non-discretized values for numeric features for model explainer
+            self.df_orig = df_new[self.columns + self.cat_columns].copy()   # train data with non-discretized values for numeric features for model explainer
 
             for col in self.columns:
                     v = df_new[col].values       # values of feature col
@@ -199,7 +198,7 @@ class Discretize(BaseEstimator, TransformerMixin):
                       bounds = np.linspace(self.lower, max(v)+self.k*np.std(v), num = self.nbins+1)
                       bs, labels = [],[]
 
-                    bs = [(bounds[i], bounds[i+1]) for i in range(len(bounds)-1)]    
+                    bs = [(bounds[i], bounds[i+1]) for i in range(len(bounds)-1)]    # TODO: better use np.diff() here instead of loop
 
                     # Add +Inf as upper bound    
                     #--------------------------
@@ -224,7 +223,7 @@ class Discretize(BaseEstimator, TransformerMixin):
 
             # Tag as fitted for sklearn compatibility: 
             # https://scikit-learn.org/stable/developers/develop.html#estimated-attributes
-            self.X_ = deepcopy(df_new)
+            self.X_ = df_new.copy()
             self.columns_ = self.columns
             self.nbins_ = self.nbins 
             self.xindex_fitted_ = df_new.index
@@ -234,12 +233,12 @@ class Discretize(BaseEstimator, TransformerMixin):
             self.k_ = self.k 
             self.eps_ = self.eps 
             self.make_labels_ = self.make_labels 
-            self.df_orig_ = deepcopy(self.df_orig)
+            self.df_orig_ = self.df_orig.copy()
             if self.verbose and (self.nof_bins is not None): 
                 print("Binned continous features into", self.nbins,"bins.")
             return self
     
-    #@timer
+    @timer
     def transform(self, X : pd.DataFrame)-> pd.DataFrame:
         
         if X.index[0] != 0:    
@@ -247,7 +246,7 @@ class Discretize(BaseEstimator, TransformerMixin):
             if self.verbose: 
                print("Reseting index of input dataframe.")    
 
-        df_new = deepcopy(X)
+        df_new = X.copy()
         self.cat_columns = df_new.select_dtypes(include=['object', 'category']).columns.tolist()  # categorical (for later reference in postproc.)
         numerical_columns = df_new.select_dtypes(include=[np.number, 'float', 'int']).columns.tolist()    # numeric features only
 
@@ -257,13 +256,16 @@ class Discretize(BaseEstimator, TransformerMixin):
         df_new[self.columns_] = df_new[self.columns_].astype(float)   
 
         # Update & Keep for model explainer
-        self.df_orig = deepcopy(df_new[self.columns_ + self.cat_columns])  
+        self.df_orig = df_new[self.columns_ + self.cat_columns].copy()  
 
         # if you already have it from fit then just output it
         if hasattr(self, 'X_') and (len(self.xindex_fitted_) == X.shape[0]):
             return self.X_
 
         # Map new values to discrete training buckets/bins: 
+        
+        # for row in df_new.itertuples():
+        #     ind = row.Index
         for ind, row in df_new.iterrows(): 
             row_values = []
             try:
@@ -522,7 +524,7 @@ class onehot_encoder(TransformerMixin, BaseEstimator):
         self.selected_col = X.columns[~X.columns.isin(self.exclude_col)] 
         if self.exclude_col:
             print("Features",self.exclude_col, 'excluded.')  
-        df = deepcopy(X[self.selected_col])
+        df = X[self.selected_col].copy()
         for z, var in enumerate(df.columns):         # loop over columns
             self.unique_categories_[var] = df[var].unique().tolist()
             # Add 'Unknown/Others' bucket to levels for unseen levels:
@@ -531,7 +533,7 @@ class onehot_encoder(TransformerMixin, BaseEstimator):
             if z>0:
                dummy = pd.concat([dummy, one], axis=1, sort=False)
             else:
-               dummy = deepcopy(one)
+               dummy = one.copy()
 
             # Leave out the 'OTHERS'/oos_token_ buckets here for consistency:
             self.value2name_[var] = {level_orig:dummy_name for level_orig, dummy_name in zip(self.unique_categories_[var], list(one.columns)[:-1])}
@@ -542,9 +544,44 @@ class onehot_encoder(TransformerMixin, BaseEstimator):
         self.X_ = df
         return self    
 
+    # @timer
+    # def transform(self, X: pd.DataFrame)-> csr_matrix:
+        
+    #     check_is_fitted(self)        # Check if fit had been called
+    #     self.selected_col = X.columns[~X.columns.isin(self.exclude_col)]
+
+    #     # If you already have it from fit then just output it
+    #     if hasattr(self, 'X_') and self.X_.equals(X):
+    #         return self.dummyX_
+ 
+    #     df = X[self.selected_col].copy()
+
+    #     ohm = np.zeros((df.shape[0],len(self.columns_)))
+    #     for r, my_tuple in enumerate(df.itertuples(index=False)):    # loop over rows (slow)
+    #         my_index = []
+    #         for z, col in enumerate(df.columns):              # loop over columns
+    #             raw_level_list = list(self.value2name_[col].keys())
+    #             mask = my_tuple[z] == np.array(raw_level_list)
+    #             if any(mask): 
+    #                 index = np.where(mask)[0][0]
+    #                 dummy_name = self.value2name_[col][raw_level_list[index]]
+    #             else:
+    #                 dummy_name = col + self.prefix_sep_ + self.oos_token_
+    #             my_index.append(self.names2index_[dummy_name])
+    #         targets = np.array(my_index).reshape(-1)
+    #         ohm[r,targets] = 1    
+    #     return csr_matrix(ohm) 
+
     #@timer
     def transform(self, X: pd.DataFrame)-> csr_matrix:
-        
+        """Map X values to respective bins and encode as one-hot
+
+        Args:
+            X (pd.DataFrame): Discretized/Binned input dataframe
+
+        Returns:
+            csr_matrix: Dummy/One-hot matrix
+        """
         check_is_fitted(self)        # Check if fit had been called
         self.selected_col = X.columns[~X.columns.isin(self.exclude_col)]
 
@@ -552,42 +589,22 @@ class onehot_encoder(TransformerMixin, BaseEstimator):
         if hasattr(self, 'X_') and self.X_.equals(X):
             return self.dummyX_
  
-        df = deepcopy(X[self.selected_col])
-        ohm = np.zeros((df.shape[0],len(self.columns_)))
-        for r, my_tuple in enumerate(df.itertuples(index=False)):    # loop over rows (slow)
-            my_index = []
-            for z, col in enumerate(df.columns):              # loop over columns
-                raw_level_list = list(self.value2name_[col].keys())
-                mask = my_tuple[z] == np.array(raw_level_list)
-                if any(mask): 
-                    index = np.where(mask)[0][0]
-                    dummy_name = self.value2name_[col][raw_level_list[index]]
-                else:
-                    dummy_name = col + self.prefix_sep_ + self.oos_token_
-                my_index.append(self.names2index_[dummy_name])
-            targets = np.array(my_index).reshape(-1)
-            ohm[r,targets] = 1    
-        return csr_matrix(ohm) 
-        
+        df = X[self.selected_col].copy()
+        ohm = np.zeros((df.shape[0], len(self.columns_)))
 
-    def single_row(self, my_tuple : pd.DataFrame, df_columns : List[str])-> np.array:
-        """Run over all columns for single row"""
-        my_index = []
-        ohm = np.zeros((len(self.columns_)), dtype=np.int8)
-        for z, col in enumerate(df_columns): 
+        for col in df.columns:
+            raw_level_list = np.array(list(self.value2name_[col].keys()))   # take advantage of vectorized operations
+            mask = np.isin(df[col].values, raw_level_list)        # use vectorized operations 
 
-            raw_level_list = list(self.value2name_[col].keys())
-            mask = my_tuple[z] == np.array(raw_level_list)
-            if any(mask): 
-                index = np.where(mask)[0][0]
-                dummy_name = self.value2name_[col][raw_level_list[index]]
-            else:
-                dummy_name = col + self.prefix_sep_ + self.oos_token_
-            my_index.append(self.names2index_[dummy_name])
+            binned_values = df[col].values 
+            oos_dummy_name = col + self.prefix_sep_ + self.oos_token_
+            # set 'Others' category in case no overlap of input interval with train set intervals ('bins')
+            dummy_names = np.array([self.value2name_[col][binned_values[z]] if m else oos_dummy_name for z, m in zip(np.arange(len(mask)), mask)])
+            
+            my_index = np.array([self.names2index_[dummy_name] for dummy_name in dummy_names])
+            ohm[np.arange(df.shape[0]), my_index] = 1      
+        return csr_matrix(ohm)   
 
-        targets = np.array(my_index).reshape(-1)
-        ohm[targets] = 1
-        return ohm
 
     def get_feature_names_out(self, input_features : list = None)-> np.array: 
         """
