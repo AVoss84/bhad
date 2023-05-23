@@ -35,6 +35,7 @@ print(np.unique(y_train, return_counts=True))
 print(np.unique(y_test, return_counts=True))
 
 
+
 reload(utils)
 
 from sklearn.pipeline import Pipeline
@@ -52,8 +53,6 @@ scores_train = pipe.decision_function(X_train)
 y_pred_test = pipe.predict(X_test)
 scores_test = pipe.decision_function(X_test)
 
-
-np.all(y_pred_test == y_pred_test_gpt)
 #---------------------------------------------
 
 reload(utils)

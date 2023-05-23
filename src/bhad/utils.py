@@ -238,7 +238,7 @@ class Discretize(BaseEstimator, TransformerMixin):
                 print("Binned continous features into", self.nbins,"bins.")
             return self
     
-    @timer
+    #@timer
     def transform(self, X : pd.DataFrame)-> pd.DataFrame:
         
         if X.index[0] != 0:    
@@ -263,16 +263,14 @@ class Discretize(BaseEstimator, TransformerMixin):
             return self.X_
 
         # Map new values to discrete training buckets/bins: 
-        
-        # for row in df_new.itertuples():
-        #     ind = row.Index
-        for ind, row in df_new.iterrows(): 
+        for row in df_new.itertuples():
+            ind = row.Index
             row_values = []
             try:
                 for c in self.columns_:
                     bin_c = self.save_binnings_[c]
-                    if ~np.isnan(row[c]):
-                        row_values.append(list(bin_c[bin_c.contains(row[c])])[0])
+                    if ~np.isnan(getattr(row, c)):
+                        row_values.append(list(bin_c[bin_c.contains(getattr(row, c))])[0])
                     else:
                         row_values.append(np.nan)    
                 df_new.loc[ind, self.columns_] = row_values
