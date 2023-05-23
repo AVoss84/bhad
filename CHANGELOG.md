@@ -35,3 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Then compute the empirical (1-p)% confidence interval of the observations. 
 If an observation is not an element of that interval consider it as relevant (w.r.t. anomaly score expl.)     
 - Readme.md change 
+
+## [0.0.9]
+### explainer module: Change maximum number of bins logic
+- If user does not specify a maximum number of bins in the explainer, use a square root of sampe size as a default rule

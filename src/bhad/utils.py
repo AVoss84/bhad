@@ -1,9 +1,9 @@
-import os, sys, warnings, functools, math, time
-from typing import (List, Tuple)
+import os, warnings, functools, time
+from typing import (List, Tuple, Dict)
 import numpy as np
 import pandas as pd
 from pandas.api.types import CategoricalDtype
-from sklearn.base import BaseEstimator, OutlierMixin, TransformerMixin
+from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.utils.validation import check_is_fitted
 #from sklearn.preprocessing import OneHotEncoder
 from scipy.special import loggamma
@@ -13,11 +13,10 @@ from scipy.stats import wishart, bernoulli, norm
 #from scipy.stats import t as student
 from scipy.optimize import minimize_scalar
 #from math import floor, ceil
-from copy import deepcopy
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from functools import wraps
-from tqdm.auto import tqdm   
+#from tqdm.auto import tqdm   
 
 
 # timer decorator for any function func:
@@ -102,6 +101,27 @@ class Discretize(BaseEstimator, TransformerMixin):
     def __del__(self):
         class_name = self.__class__.__name__
         #print(class_name, "destroyed")
+
+    def __repr__(self):
+        return f"Discretize(columns = {self.columns}, nbins = {self.nof_bins}, lower = {self.lower}, k = {self.k}, round_intervals = {self.round_intervals}, eps = {self.eps}, make_labels = {self.make_labels}, prior_gamma = {self.prior_gamma}, prior_max_M = {self.prior_max_M}, verbose = {self.verbose})"
+    
+    def log_post_pmf_nof_bins(self, feature_values : np.array)-> Dict[int, float]:
+        """
+        Evaluate log posterior prob. measure of number of bins (over grid of supported values)
+        see paper section 'posteriors'.
+
+        Args:
+            feature_values (np.array): univariate variable values
+
+        Returns:
+            Dict[int, float]: grid of number of bin values with log-pmf values
+        """
+        # 'Integrate out' out hyperparameter gamma from joint prior via Simpson's rule:
+        log_marg_prior_nbins = {m : np.log(1e-10 + simpson(np.array([geometric_prior(M = m, gamma = g, max_M = self.prior_max_M, log = False) for g in self.gamma_grid]), self.gamma_grid)) for m in range(1, self.prior_max_M, 1)}
+        
+        # Evaluate log posterior prob. measure of number of bins (over grid of supported values):
+        return {m : log_marg_prior_nbins[m] + log_marglike_nbins(M = m, y = feature_values) for m in range(1,self.prior_max_M, 1)}
+
     
     #@timer
     def fit(self, X : pd.DataFrame)-> 'Discretize':
@@ -120,7 +140,7 @@ class Discretize(BaseEstimator, TransformerMixin):
                 X.reset_index(drop=True, inplace=True)     # Need this to conform with 0...n-1 index in explainer and elsewhere 
                 if self.verbose: 
                     print("Resetting index of input dataframe.")    
-            df_new = deepcopy(X)
+            df_new = X.copy()
             self.nbins = self.nof_bins    # initialize (might be changed in case of low variance features) 
             self.cat_columns = df_new.select_dtypes(include=['object','category']).columns.tolist()  # categorical (for later reference in postproc.)
             if not self.columns:
@@ -131,9 +151,8 @@ class Discretize(BaseEstimator, TransformerMixin):
                 print(f"Used {len(self.columns)} numeric feature(s) and {len(self.cat_columns)} categorical feature(s).")      
 
             df_new[self.columns] = df_new[self.columns].astype(float)        
-            ptive_inf = float ('inf')
-            ntive_inf = float('-inf')
-            self.df_orig = deepcopy(df_new[self.columns + self.cat_columns])   # train data with non-discretized values for numeric features for model explainer
+            ptive_inf, ntive_inf = float ('inf'), float('-inf')
+            self.df_orig = df_new[self.columns + self.cat_columns].copy()   # train data with non-discretized values for numeric features for model explainer
 
             for col in self.columns:
                     v = df_new[col].values       # values of feature col
@@ -147,12 +166,10 @@ class Discretize(BaseEstimator, TransformerMixin):
                         #print(f'FD rule: {freedman_diaconis(v)}')
                         #print(f'Sturges: {1 + ceil(np.log2(len(v)))}')
                         
-                        # Evaluate log joint posterior of grid of number of bin values:
-                        #---------------------------------------------------------------
-                        log_marg_prior_nbins = {m : np.log(1e-10 + simpson(np.array([geometric_prior(M = m, gamma = g, max_M = self.prior_max_M, log = False) for g in self.gamma_grid]), self.gamma_grid)) for m in range(1, self.prior_max_M, 1)}
-                        
-                        lpr = {m : log_marg_prior_nbins[m] + log_marglike_nbins(M = m, y = v) for m in range(1,self.prior_max_M, 1)}
-                      
+                        # Evaluate log posterior prob. measure of number of bins:
+                        #---------------------------------------------------------
+                        lpr = self.log_post_pmf_nof_bins(feature_values = v)
+
                         # Compute K_MAP for each feature:
                         #---------------------------------
                         self.nbins = max(lpr, key=lpr.get)    
@@ -181,7 +198,7 @@ class Discretize(BaseEstimator, TransformerMixin):
                       bounds = np.linspace(self.lower, max(v)+self.k*np.std(v), num = self.nbins+1)
                       bs, labels = [],[]
 
-                    bs = [(bounds[i], bounds[i+1]) for i in range(len(bounds)-1)]    
+                    bs = [(bounds[i], bounds[i+1]) for i in range(len(bounds)-1)]    # TODO: better use np.diff() here instead of loop
 
                     # Add +Inf as upper bound    
                     #--------------------------
@@ -206,7 +223,7 @@ class Discretize(BaseEstimator, TransformerMixin):
 
             # Tag as fitted for sklearn compatibility: 
             # https://scikit-learn.org/stable/developers/develop.html#estimated-attributes
-            self.X_ = deepcopy(df_new)
+            self.X_ = df_new.copy()
             self.columns_ = self.columns
             self.nbins_ = self.nbins 
             self.xindex_fitted_ = df_new.index
@@ -216,7 +233,7 @@ class Discretize(BaseEstimator, TransformerMixin):
             self.k_ = self.k 
             self.eps_ = self.eps 
             self.make_labels_ = self.make_labels 
-            self.df_orig_ = deepcopy(self.df_orig)
+            self.df_orig_ = self.df_orig.copy()
             if self.verbose and (self.nof_bins is not None): 
                 print("Binned continous features into", self.nbins,"bins.")
             return self
@@ -229,7 +246,7 @@ class Discretize(BaseEstimator, TransformerMixin):
             if self.verbose: 
                print("Reseting index of input dataframe.")    
 
-        df_new = deepcopy(X)
+        df_new = X.copy()
         self.cat_columns = df_new.select_dtypes(include=['object', 'category']).columns.tolist()  # categorical (for later reference in postproc.)
         numerical_columns = df_new.select_dtypes(include=[np.number, 'float', 'int']).columns.tolist()    # numeric features only
 
@@ -239,20 +256,21 @@ class Discretize(BaseEstimator, TransformerMixin):
         df_new[self.columns_] = df_new[self.columns_].astype(float)   
 
         # Update & Keep for model explainer
-        self.df_orig = deepcopy(df_new[self.columns_ + self.cat_columns])  
+        self.df_orig = df_new[self.columns_ + self.cat_columns].copy()  
 
         # if you already have it from fit then just output it
         if hasattr(self, 'X_') and (len(self.xindex_fitted_) == X.shape[0]):
             return self.X_
 
         # Map new values to discrete training buckets/bins: 
-        for ind, row in df_new.iterrows(): 
+        for row in df_new.itertuples():
+            ind = row.Index
             row_values = []
             try:
                 for c in self.columns_:
                     bin_c = self.save_binnings_[c]
-                    if ~np.isnan(row[c]):
-                        row_values.append(list(bin_c[bin_c.contains(row[c])])[0])
+                    if ~np.isnan(getattr(row, c)):
+                        row_values.append(list(bin_c[bin_c.contains(getattr(row, c))])[0])
                     else:
                         row_values.append(np.nan)    
                 df_new.loc[ind, self.columns_] = row_values
@@ -494,6 +512,9 @@ class onehot_encoder(TransformerMixin, BaseEstimator):
         self.unique_categories_, self.value2name_ = dict(), dict()
         if self.verbose : 
             print("One-hot encoding categorical features.")
+        
+    def __repr__(self):
+        return f"onehot_encoder(exclude_columns = {self.exclude_col}, prefix_sep = {self.prefix_sep_}, oos_token = {self.oos_token_}, verbose = {self.verbose})"
 
     #@timer
     def fit(self, X: pd.DataFrame)-> 'onehot_encoder':
@@ -501,7 +522,7 @@ class onehot_encoder(TransformerMixin, BaseEstimator):
         self.selected_col = X.columns[~X.columns.isin(self.exclude_col)] 
         if self.exclude_col:
             print("Features",self.exclude_col, 'excluded.')  
-        df = deepcopy(X[self.selected_col])
+        df = X[self.selected_col].copy()
         for z, var in enumerate(df.columns):         # loop over columns
             self.unique_categories_[var] = df[var].unique().tolist()
             # Add 'Unknown/Others' bucket to levels for unseen levels:
@@ -510,7 +531,7 @@ class onehot_encoder(TransformerMixin, BaseEstimator):
             if z>0:
                dummy = pd.concat([dummy, one], axis=1, sort=False)
             else:
-               dummy = deepcopy(one)
+               dummy = one.copy()
 
             # Leave out the 'OTHERS'/oos_token_ buckets here for consistency:
             self.value2name_[var] = {level_orig:dummy_name for level_orig, dummy_name in zip(self.unique_categories_[var], list(one.columns)[:-1])}
@@ -521,9 +542,44 @@ class onehot_encoder(TransformerMixin, BaseEstimator):
         self.X_ = df
         return self    
 
+    # @timer
+    # def transform(self, X: pd.DataFrame)-> csr_matrix:
+        
+    #     check_is_fitted(self)        # Check if fit had been called
+    #     self.selected_col = X.columns[~X.columns.isin(self.exclude_col)]
+
+    #     # If you already have it from fit then just output it
+    #     if hasattr(self, 'X_') and self.X_.equals(X):
+    #         return self.dummyX_
+ 
+    #     df = X[self.selected_col].copy()
+
+    #     ohm = np.zeros((df.shape[0],len(self.columns_)))
+    #     for r, my_tuple in enumerate(df.itertuples(index=False)):    # loop over rows (slow)
+    #         my_index = []
+    #         for z, col in enumerate(df.columns):              # loop over columns
+    #             raw_level_list = list(self.value2name_[col].keys())
+    #             mask = my_tuple[z] == np.array(raw_level_list)
+    #             if any(mask): 
+    #                 index = np.where(mask)[0][0]
+    #                 dummy_name = self.value2name_[col][raw_level_list[index]]
+    #             else:
+    #                 dummy_name = col + self.prefix_sep_ + self.oos_token_
+    #             my_index.append(self.names2index_[dummy_name])
+    #         targets = np.array(my_index).reshape(-1)
+    #         ohm[r,targets] = 1    
+    #     return csr_matrix(ohm) 
+
     #@timer
     def transform(self, X: pd.DataFrame)-> csr_matrix:
-        
+        """Map X values to respective bins and encode as one-hot
+
+        Args:
+            X (pd.DataFrame): Discretized/Binned input dataframe
+
+        Returns:
+            csr_matrix: Dummy/One-hot matrix
+        """
         check_is_fitted(self)        # Check if fit had been called
         self.selected_col = X.columns[~X.columns.isin(self.exclude_col)]
 
@@ -531,23 +587,22 @@ class onehot_encoder(TransformerMixin, BaseEstimator):
         if hasattr(self, 'X_') and self.X_.equals(X):
             return self.dummyX_
  
-        df = deepcopy(X[self.selected_col])
-        ohm = np.zeros((df.shape[0],len(self.columns_)))
-        for r, my_tuple in enumerate(df.itertuples(index=False)):    # loop over rows
-            my_index = []
-            for z, col in enumerate(df.columns):
-                raw_level_list = list(self.value2name_[col].keys())
-                mask = my_tuple[z] == np.array(raw_level_list)
-                if any(mask): 
-                    index = np.where(mask)[0][0]
-                    dummy_name = self.value2name_[col][raw_level_list[index]]
-                else:
-                    dummy_name = col + self.prefix_sep_ + self.oos_token_
-                my_index.append(self.names2index_[dummy_name])
-            targets = np.array(my_index).reshape(-1)
-            ohm[r,targets] = 1    
-        return csr_matrix(ohm) 
-        
+        df = X[self.selected_col].copy()
+        ohm = np.zeros((df.shape[0], len(self.columns_)))
+
+        for col in df.columns:
+            raw_level_list = np.array(list(self.value2name_[col].keys()))   # take advantage of vectorized operations
+            mask = np.isin(df[col].values, raw_level_list)        # use vectorized operations 
+
+            binned_values = df[col].values 
+            oos_dummy_name = col + self.prefix_sep_ + self.oos_token_
+            # set 'Others' category in case no overlap of input interval with train set intervals ('bins')
+            dummy_names = np.array([self.value2name_[col][binned_values[z]] if m else oos_dummy_name for z, m in zip(np.arange(len(mask)), mask)])
+            
+            my_index = np.array([self.names2index_[dummy_name] for dummy_name in dummy_names])
+            ohm[np.arange(df.shape[0]), my_index] = 1      
+        return csr_matrix(ohm)   
+
 
     def get_feature_names_out(self, input_features : list = None)-> np.array: 
         """
