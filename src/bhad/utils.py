@@ -198,7 +198,7 @@ class Discretize(BaseEstimator, TransformerMixin):
                       bounds = np.linspace(self.lower, max(v)+self.k*np.std(v), num = self.nbins+1)
                       bs, labels = [],[]
 
-                    bs = [(bounds[i], bounds[i+1]) for i in range(len(bounds)-1)]    # TODO: better use np.diff() here instead of loop
+                    bs = [(bounds[i], bounds[i+1]) for i in range(len(bounds)-1)]   
 
                     # Add +Inf as upper bound    
                     #--------------------------
@@ -206,7 +206,8 @@ class Discretize(BaseEstimator, TransformerMixin):
                     
                     # Add -Inf as lower bound    
                     #--------------------------
-                    if self.lower is None: bs[0] = (ntive_inf, bs[0][1]) 
+                    if self.lower is None: 
+                        bs[0] = (ntive_inf, bs[0][1]) 
                       
                     # Make left closed [..) interval to be save in cases like: [0,..)
                     #--------------------------------------------------------------------
@@ -384,7 +385,7 @@ def accratio(x : np.array)-> np.array:
 def rbartsim(MCsim : int = 10**4, seed : int = None, verbose : bool = True)-> np.array:
     """
     Sample from Bart Simpson density via Accept-Reject algorithm, 
-    see for example Robert, Casella
+    see e.g. Robert, Casella
     """
     if seed: 
         np.random.seed(seed) 
@@ -553,6 +554,7 @@ class onehot_encoder(TransformerMixin, BaseEstimator):
             csr_matrix: Dummy/One-hot matrix
         """
         check_is_fitted(self)        # Check if fit had been called
+
         self.selected_col = X.columns[~X.columns.isin(self.exclude_col)]
 
         # If you already have it from fit then just output it
