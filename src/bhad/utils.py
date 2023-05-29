@@ -1,5 +1,6 @@
 import os, warnings, functools, time
-from typing import (List, Tuple, Dict)
+from functools import wraps
+from typing import List, Tuple, Dict
 import numpy as np
 import pandas as pd
 from pandas.api.types import CategoricalDtype
@@ -15,7 +16,6 @@ from scipy.optimize import minimize_scalar
 #from math import floor, ceil
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-from functools import wraps
 #from tqdm.auto import tqdm   
 
 
@@ -308,10 +308,18 @@ def freedman_diaconis(data : np.array, return_width : bool = False)-> int:
 
 def log_marglike_nbins(M : int, y : np.array)-> float:
     """
-    Log posterior of number of bins M
+    Log-posterior of number of bins M
     using conjugate Jeffreys' prior for the bin probabilities 
-    and a flat improper prior for the number of bins. This is therefore equivalent to the marginal
-    log-likelihood of the number of bins  
+    and a flat improper prior for the number of bins. 
+    This is therefore equivalent to the marginal log-likelihood 
+    of the number of bins. 
+
+    Args:
+        M (int): number of bins parameter
+        y (np.array): univariate sample data points 
+
+    Returns:
+        float: log posterior probability value
     """
     N = len(y)
     counts, _ = np.histogram(y, bins = np.linspace(min(y), max(y), M+1))   # evenly spaced bins
@@ -324,7 +332,7 @@ def exp_normalize(x : np.array)-> np.array:
     https://timvieira.github.io/blog/post/2014/02/11/exp-normalize-trick/
 
     Args:
-        x (np.array): _description_
+        x (np.array): sample data points
 
     Returns:
         np.array: Normalized input array
@@ -361,12 +369,17 @@ def geometric_prior(M : int, gamma : float = 0.7, max_M : int = 100, log : bool 
 #     """  
 #     return log_marglike_nbins(m, y) + geometric_prior(m, gamma, max_M, log = True)
 
-
 def bart_simpson_density(x : np.array, m : int = 4)-> np.array:
     """
     Calculate density of Bart Simpson distr. aka The Claw
     (see Larry Wasserman, All of nonparametric statistics, section 6)
-    m: number of mixture components 
+
+    Args:
+        x (np.array): discrete grid over support of the distribution
+        m (int, optional): number of mixture components. Defaults to 4.
+
+    Returns:
+        np.array: density values
     """
     mix = 0
     for j in range(m+1):
@@ -408,7 +421,7 @@ class mvt2mixture:
                                'nu1': None, 'nu2': None}, seed : int = None, gaussian : bool = False, **figure_param):
         """
         Multivariate 2-component Student-t mixture random generator. 
-        Direct random sampling via using the Student-t representation as a continous scale mixture distr.   
+        Direct random sampling using the Student-t representation as a continous scale mixture distr.   
         -------
         Input:
         -------
