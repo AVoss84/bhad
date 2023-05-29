@@ -1,5 +1,6 @@
 import os, warnings, functools, time
-from typing import (List, Tuple, Dict)
+from functools import wraps
+from typing import List, Tuple, Dict
 import numpy as np
 import pandas as pd
 from pandas.api.types import CategoricalDtype
@@ -15,7 +16,6 @@ from scipy.optimize import minimize_scalar
 #from math import floor, ceil
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-from functools import wraps
 #from tqdm.auto import tqdm   
 
 
@@ -198,7 +198,7 @@ class Discretize(BaseEstimator, TransformerMixin):
                       bounds = np.linspace(self.lower, max(v)+self.k*np.std(v), num = self.nbins+1)
                       bs, labels = [],[]
 
-                    bs = [(bounds[i], bounds[i+1]) for i in range(len(bounds)-1)]    # TODO: better use np.diff() here instead of loop
+                    bs = [(bounds[i], bounds[i+1]) for i in range(len(bounds)-1)]   
 
                     # Add +Inf as upper bound    
                     #--------------------------
@@ -206,7 +206,8 @@ class Discretize(BaseEstimator, TransformerMixin):
                     
                     # Add -Inf as lower bound    
                     #--------------------------
-                    if self.lower is None: bs[0] = (ntive_inf, bs[0][1]) 
+                    if self.lower is None: 
+                        bs[0] = (ntive_inf, bs[0][1]) 
                       
                     # Make left closed [..) interval to be save in cases like: [0,..)
                     #--------------------------------------------------------------------
@@ -307,10 +308,18 @@ def freedman_diaconis(data : np.array, return_width : bool = False)-> int:
 
 def log_marglike_nbins(M : int, y : np.array)-> float:
     """
-    Log posterior of number of bins M
+    Log-posterior of number of bins M
     using conjugate Jeffreys' prior for the bin probabilities 
-    and a flat improper prior for the number of bins. This is therefore equivalent to the marginal
-    log-likelihood of the number of bins  
+    and a flat improper prior for the number of bins. 
+    This is therefore equivalent to the marginal log-likelihood 
+    of the number of bins. 
+
+    Args:
+        M (int): number of bins parameter
+        y (np.array): univariate sample data points 
+
+    Returns:
+        float: log posterior probability value
     """
     N = len(y)
     counts, _ = np.histogram(y, bins = np.linspace(min(y), max(y), M+1))   # evenly spaced bins
@@ -323,7 +332,7 @@ def exp_normalize(x : np.array)-> np.array:
     https://timvieira.github.io/blog/post/2014/02/11/exp-normalize-trick/
 
     Args:
-        x (np.array): _description_
+        x (np.array): sample data points
 
     Returns:
         np.array: Normalized input array
@@ -360,12 +369,17 @@ def geometric_prior(M : int, gamma : float = 0.7, max_M : int = 100, log : bool 
 #     """  
 #     return log_marglike_nbins(m, y) + geometric_prior(m, gamma, max_M, log = True)
 
-
 def bart_simpson_density(x : np.array, m : int = 4)-> np.array:
     """
     Calculate density of Bart Simpson distr. aka The Claw
     (see Larry Wasserman, All of nonparametric statistics, section 6)
-    m: number of mixture components 
+
+    Args:
+        x (np.array): discrete grid over support of the distribution
+        m (int, optional): number of mixture components. Defaults to 4.
+
+    Returns:
+        np.array: density values
     """
     mix = 0
     for j in range(m+1):
@@ -384,7 +398,7 @@ def accratio(x : np.array)-> np.array:
 def rbartsim(MCsim : int = 10**4, seed : int = None, verbose : bool = True)-> np.array:
     """
     Sample from Bart Simpson density via Accept-Reject algorithm, 
-    see for example Robert, Casella
+    see e.g. Robert, Casella
     """
     if seed: 
         np.random.seed(seed) 
@@ -407,7 +421,7 @@ class mvt2mixture:
                                'nu1': None, 'nu2': None}, seed : int = None, gaussian : bool = False, **figure_param):
         """
         Multivariate 2-component Student-t mixture random generator. 
-        Direct random sampling via using the Student-t representation as a continous scale mixture distr.   
+        Direct random sampling using the Student-t representation as a continous scale mixture distr.   
         -------
         Input:
         -------
@@ -523,6 +537,8 @@ class onehot_encoder(TransformerMixin, BaseEstimator):
         if self.exclude_col:
             print("Features",self.exclude_col, 'excluded.')  
         df = X[self.selected_col].copy()
+        df.columns = [str(c) for c in df.columns]    # force columns to strings
+
         for z, var in enumerate(df.columns):         # loop over columns
             self.unique_categories_[var] = df[var].unique().tolist()
             # Add 'Unknown/Others' bucket to levels for unseen levels:
@@ -542,34 +558,6 @@ class onehot_encoder(TransformerMixin, BaseEstimator):
         self.X_ = df
         return self    
 
-    # @timer
-    # def transform(self, X: pd.DataFrame)-> csr_matrix:
-        
-    #     check_is_fitted(self)        # Check if fit had been called
-    #     self.selected_col = X.columns[~X.columns.isin(self.exclude_col)]
-
-    #     # If you already have it from fit then just output it
-    #     if hasattr(self, 'X_') and self.X_.equals(X):
-    #         return self.dummyX_
- 
-    #     df = X[self.selected_col].copy()
-
-    #     ohm = np.zeros((df.shape[0],len(self.columns_)))
-    #     for r, my_tuple in enumerate(df.itertuples(index=False)):    # loop over rows (slow)
-    #         my_index = []
-    #         for z, col in enumerate(df.columns):              # loop over columns
-    #             raw_level_list = list(self.value2name_[col].keys())
-    #             mask = my_tuple[z] == np.array(raw_level_list)
-    #             if any(mask): 
-    #                 index = np.where(mask)[0][0]
-    #                 dummy_name = self.value2name_[col][raw_level_list[index]]
-    #             else:
-    #                 dummy_name = col + self.prefix_sep_ + self.oos_token_
-    #             my_index.append(self.names2index_[dummy_name])
-    #         targets = np.array(my_index).reshape(-1)
-    #         ohm[r,targets] = 1    
-    #     return csr_matrix(ohm) 
-
     #@timer
     def transform(self, X: pd.DataFrame)-> csr_matrix:
         """Map X values to respective bins and encode as one-hot
@@ -581,6 +569,7 @@ class onehot_encoder(TransformerMixin, BaseEstimator):
             csr_matrix: Dummy/One-hot matrix
         """
         check_is_fitted(self)        # Check if fit had been called
+
         self.selected_col = X.columns[~X.columns.isin(self.exclude_col)]
 
         # If you already have it from fit then just output it
@@ -588,6 +577,7 @@ class onehot_encoder(TransformerMixin, BaseEstimator):
             return self.dummyX_
  
         df = X[self.selected_col].copy()
+        df.columns = [str(c) for c in df.columns]    # force columns to strings
         ohm = np.zeros((df.shape[0], len(self.columns_)))
 
         for col in df.columns:
@@ -618,7 +608,7 @@ class onehot_encoder(TransformerMixin, BaseEstimator):
             input_features = self.selected_col
         self.dummy_names, self.dummy_names_index, self.dummy_names_by_feat = [], {}, {}
         for col_name in input_features:
-            mask = [col_name+self.prefix_sep_ in col for col in self.columns_]
+            mask = [str(col_name)+self.prefix_sep_ in col for col in self.columns_]
             if any(mask):
                 index = np.where(np.array(mask))[0]
                 self.dummy_names_index[col_name] = index

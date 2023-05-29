@@ -1,6 +1,7 @@
 from bhad import model
 import bhad.utils as utils
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 from importlib import reload
 
@@ -35,7 +36,6 @@ print(np.unique(y_train, return_counts=True))
 print(np.unique(y_test, return_counts=True))
 
 
-
 reload(utils)
 
 from sklearn.pipeline import Pipeline
@@ -46,6 +46,15 @@ pipe = Pipeline(steps=[
     ('discrete' , utils.Discretize(nbins = None, verbose = False)),      # step only needed if continous features are present
     ('model', model.BHAD(contamination = 0.01))
 ])
+
+X_train = pd.DataFrame(np.random.normal(size=(1000,20))) 
+X_train = pd.DataFrame(np.random.normal(size=(1000,20)), columns=["var"+str(i) for i in np.arange(20)])
+#X_train = np.random.normal(size=(1000,20))
+X_train.shape
+
+#X_train.head()
+
+#type(X_train.columns)
 
 y_pred_train = pipe.fit_predict(X_train)   
 scores_train = pipe.decision_function(X_train) 
