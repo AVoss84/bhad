@@ -524,6 +524,8 @@ class onehot_encoder(TransformerMixin, BaseEstimator):
         if self.exclude_col:
             print("Features",self.exclude_col, 'excluded.')  
         df = X[self.selected_col].copy()
+        df.columns = [str(c) for c in df.columns]    # force columns to strings
+
         for z, var in enumerate(df.columns):         # loop over columns
             self.unique_categories_[var] = df[var].unique().tolist()
             # Add 'Unknown/Others' bucket to levels for unseen levels:
@@ -562,6 +564,7 @@ class onehot_encoder(TransformerMixin, BaseEstimator):
             return self.dummyX_
  
         df = X[self.selected_col].copy()
+        df.columns = [str(c) for c in df.columns]    # force columns to strings
         ohm = np.zeros((df.shape[0], len(self.columns_)))
 
         for col in df.columns:
@@ -592,7 +595,7 @@ class onehot_encoder(TransformerMixin, BaseEstimator):
             input_features = self.selected_col
         self.dummy_names, self.dummy_names_index, self.dummy_names_by_feat = [], {}, {}
         for col_name in input_features:
-            mask = [col_name+self.prefix_sep_ in col for col in self.columns_]
+            mask = [str(col_name)+self.prefix_sep_ in col for col in self.columns_]
             if any(mask):
                 index = np.where(np.array(mask))[0]
                 self.dummy_names_index[col_name] = index
