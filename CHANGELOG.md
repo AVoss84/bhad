@@ -39,3 +39,7 @@ If an observation is not an element of that interval consider it as relevant (w.
 ## [0.0.9]
 ### explainer module: Change maximum number of bins logic
 - If user does not specify a maximum number of bins in the explainer, use a square root of sampe size as a default rule
+
+## [0.1.0]
+### Change one_hot_encoder for speed improvements
+- Use vectorization in transform method of one_hot_encoder of utils.py. Yields favorable run time improvement
