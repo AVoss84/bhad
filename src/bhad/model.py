@@ -7,6 +7,7 @@ from sklearn.base import BaseEstimator, OutlierMixin
 from sklearn.preprocessing import OneHotEncoder
 import bhad.utils as utils
 
+from functools import lru_cache
 class BHAD(BaseEstimator, OutlierMixin):
 
     def __init__(self, contamination : float = 0.01, alpha : float = 1/2, exclude_col : Optional[List[str]] = [], 
@@ -48,7 +49,7 @@ class BHAD(BaseEstimator, OutlierMixin):
     def __repr__(self):
         return f"BHAD(contamination = {self.contamination}, alpha = {self.alpha}, exclude_col = {self.exclude_col}, numeric_features = {self.numeric_features}, cat_features = {self.cat_features}, append_score = {self.append_score}, verbose = {self.verbose})"
     
-
+    #@utils.timer
     def _fast_bhad(self, X : pd.DataFrame)-> pd.DataFrame:
         """
         Input:
@@ -108,7 +109,7 @@ class BHAD(BaseEstimator, OutlierMixin):
             out = pd.concat([df, pd.DataFrame(out, columns = ['outlier_score'])], axis=1)
         return out    
     
-
+    #@utils.timer
     def fit(self, X : pd.DataFrame, y : Union[np.array, pd.Series] = None)-> 'BHAD':
         """
         Apply the BHAD and calculate the outlier threshold value.
@@ -147,7 +148,8 @@ class BHAD(BaseEstimator, OutlierMixin):
         self.numeric_features_, self.cat_features_ = self.numeric_features, self.cat_features
         return self
 
-    
+    #@utils.timer
+    @lru_cache(maxsize=None)
     def score_samples(self, X : pd.DataFrame)-> pd.DataFrame:
         """
         Outlier score calculated by summing the counts 
@@ -216,7 +218,7 @@ class BHAD(BaseEstimator, OutlierMixin):
             self.anomaly_scores = self.score_samples(X).to_numpy() - self.threshold_
         return self.anomaly_scores
     
-    
+    #@utils.timer
     def predict(self, X : pd.DataFrame) -> np.array:
         """
         Returns labels for X.
