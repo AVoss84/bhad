@@ -263,20 +263,23 @@ class Discretize(BaseEstimator, TransformerMixin):
         if hasattr(self, 'X_') and (len(self.xindex_fitted_) == X.shape[0]):
             return self.X_
 
-        # Map new values to discrete training buckets/bins: 
-        for row in df_new.itertuples():
-            ind = row.Index
-            row_values = []
-            try:
-                for c in self.columns_:
-                    bin_c = self.save_binnings_[c]
-                    if ~np.isnan(getattr(row, c)):
-                        row_values.append(list(bin_c[bin_c.contains(getattr(row, c))])[0])
-                    else:
-                        row_values.append(np.nan)    
-                df_new.loc[ind, self.columns_] = row_values
-            except Exception as ex:
-                print(ex)        
+        # Map new values to discrete training buckets/bins
+        df_new[self.columns_] = df_new[self.columns_].applymap(lambda x: list(self.save_binnings_[x][self.save_binnings_[x].contains(x)])[0] if not np.isnan(x) else np.nan)
+
+        # # Map new values to discrete training buckets/bins: 
+        # for row in df_new.itertuples():
+        #     ind = row.Index
+        #     row_values = []
+        #     try:
+        #         for c in self.columns_:
+        #             bin_c = self.save_binnings_[c]
+        #             if ~np.isnan(getattr(row, c)):
+        #                 row_values.append(list(bin_c[bin_c.contains(getattr(row, c))])[0])
+        #             else:
+        #                 row_values.append(np.nan)    
+        #         df_new.loc[ind, self.columns_] = row_values
+        #     except Exception as ex:
+        #         print(ex)        
         return df_new
 
 
@@ -592,8 +595,8 @@ class onehot_encoder(TransformerMixin, BaseEstimator):
             my_index = np.array([self.names2index_[dummy_name] for dummy_name in dummy_names])
             ohm[np.arange(df.shape[0]), my_index] = 1      
         return csr_matrix(ohm)   
-
-
+ 
+    #@timer
     def get_feature_names_out(self, input_features : list = None)-> np.array: 
         """
         Get feature names as used in one-hot encoder, 
