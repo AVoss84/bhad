@@ -14,7 +14,7 @@ pip install bhad
 
 2.) Train the model using discrete data.
 
-For convenience these two steps can be wrapped up via a scikit-learn pipeline (optionally). 
+For convenience these two steps can be wrapped up via a scikit-learn pipeline (optional). 
 
 ```python
 from bhad.model import BHAD
