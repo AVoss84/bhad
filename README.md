@@ -10,7 +10,7 @@ pip install bhad
 
 ## Usage
 
-1.) Preprocess the input data: discretize continuous features and conduct Bayesian model selection (optionally).
+1.) Preprocess the input data: discretize continuous features and conduct Bayesian model selection (*optional*).
 
 2.) Train the model using discrete data.
 
@@ -36,7 +36,7 @@ For a given dataset get binary model decisons:
 y_pred = pipe.fit_predict(X = dataset)        
 ```
 
-Get global model explanation as well as for individual observations:
+Get *global* model explanation as well as for *individual* observations:
 
 ```python
 from bhad.explainer import Explainer
