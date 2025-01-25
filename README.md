@@ -66,7 +66,7 @@ local_expl = Explainer(bhad_obj = pipe.named_steps['model'], discretize_obj = pi
 
 local_expl.get_explanation(nof_feat_expl = 5, append = False)   # individual explanations
 
-local_expl.global_feat_imp                                      # global explanation
+print(local_expl.global_feat_imp)                                      # global explanation
 ```
 
 A detailed *toy example* using synthetic data can be found [here](https://github.com/AVoss84/bhad/blob/main/src/notebooks/Toy_Example.ipynb). An example using the Titanic dataset illustrating *model explanability* with BHAD can be found [here](https://github.com/AVoss84/bhad/blob/main/src/notebooks/Titanic_Example.ipynb).
