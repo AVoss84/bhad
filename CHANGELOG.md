@@ -43,3 +43,10 @@ If an observation is not an element of that interval consider it as relevant (w.
 ## [0.1.0]
 ### Change one_hot_encoder for speed improvements
 - Use vectorization in transform method of one_hot_encoder of utils.py. Yields favorable run time improvement
+
+## [0.2.0]
+### Update to Python 3.12
+- Change installation process from setup.py to suing pyproject.toml
+- Update Python version and related package dependencies
+- Update README to use uv for setup
+- Add more documentation
