@@ -35,9 +35,9 @@ pip install bhad
 For convenience these two steps can be wrapped up via a scikit-learn pipeline (*optional*). 
 
 ```python
+from sklearn.pipeline import Pipeline
 from bhad.model import BHAD
 from bhad.utils import Discretize
-from sklearn.pipeline import Pipeline
 
 num_cols = [....]   # names of numeric features
 cat_cols = [....]   # categorical features
