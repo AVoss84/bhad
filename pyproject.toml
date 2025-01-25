@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "bhad"
-version = "0.2.1"
+version = "0.2.1.1"
 description = "Bayesian Histogram-based Anomaly Detection"
 requires-python = ">=3.8"
 
