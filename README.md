@@ -50,10 +50,11 @@ pipe = Pipeline(steps=[
 ])
 ```
 
-For a given dataset get binary model decisons:
+For a given dataset get binary model decisons and anomaly scores:
 
 ```python
 y_pred = pipe.fit_predict(X = dataset)        
+anomaly_scores = pipe.decision_function(dataset)
 ```
 
 Get *global* model explanation as well as for *individual* observations:
