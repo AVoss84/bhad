@@ -36,9 +36,10 @@ class BHAD(BaseEstimator, OutlierMixin):
             append_score (bool, optional): Output input dataset with model scores appended in extra column. Defaults to False.
             verbose (bool, optional): Show user information. Defaults to True.
 
-        Reference:
-        ------------
-        [1] Vosseler, A. (2021): BHAD: Fast unsupervised anomaly detection using Bayesian histograms, Working paper.
+        References:
+        -----------
+        [1] Vosseler, A. (2022): Unsupervised Insurance Fraud Prediction Based on Anomaly Detector Ensembles, in Risks, 10, (132)
+        [2] Vosseler, A. (2023): BHAD: Fast unsupervised anomaly detection using Bayesian histograms, Working paper
         """
         super(BHAD, self).__init__()
         self.contamination = contamination  # outlier proportion in the dataset
