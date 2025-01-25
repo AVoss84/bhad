@@ -42,7 +42,7 @@ from bhad.utils import Discretize
 num_cols = [....]   # names of numeric features
 cat_cols = [....]   # categorical features
 
-# Setting nbins = None infers the Bayes-optimal number of bins 
+# Setting nbins = None infers the Bayes-optimal number of bins (=only parameter)
 # using the MAP estimate
 pipe = Pipeline(steps=[
    ('discrete', Discretize(nbins = None)),   
