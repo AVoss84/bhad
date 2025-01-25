@@ -62,7 +62,7 @@ Get *global* model explanation as well as for *individual* observations:
 ```python
 from bhad.explainer import Explainer
 
-local_expl = Explainer(pipe.named_steps['model'], pipe.named_steps['discrete']).fit()
+local_expl = Explainer(bhad_obj = pipe.named_steps['model'], discretize_obj = pipe.named_steps['discrete']).fit()
 
 local_expl.get_explanation(nof_feat_expl = 5, append = False)   # individual explanations
 
