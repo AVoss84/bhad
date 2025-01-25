@@ -13,10 +13,10 @@ source env_bhad/bin/activate
 
 For local development (only):
 ```bash
-uv pip install -r pyproject.toml --trusted-host pypi.org --trusted-host files.pythonhosted.org   
+uv pip install -r pyproject.toml  
 
 # Install bhad in editable mode (incl. notebook dependencies)
-uv pip install -e ".[notebook]" --trusted-host pypi.org --trusted-host files.pythonhosted.org
+uv pip install -e ".[notebook]"
 ```
 
 Install directly from PyPi:
