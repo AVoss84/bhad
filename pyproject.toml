@@ -1,0 +1,46 @@
+[build-system]
+requires = [ "setuptools>=61.0", "wheel" ]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bhad"
+version = "0.2"
+description = "Bayesian Histogram-based Anomaly Detection"
+requires-python = ">=3.12"
+
+readme = { file = "README.md", content-type = "text/markdown" }
+
+authors = [
+  { name = "Alexander Vosseler" }
+]
+maintainers = [
+  { name = "Alexander Vosseler" }
+]
+
+keywords = ["bayesian-inference", "anomaly-detection", "unsupervised-learning", "explainability"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent"
+]
+
+dependencies = [
+  "pandas==2.*",
+  "scikit_learn==1.*",
+  "matplotlib==3.*",
+  "statsmodels==0.14.*",
+  "tqdm"
+]
+
+[project.optional-dependencies]
+notebook = [
+  "jupyter",
+  "ipykernel"
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["bhad*"]

@@ -1,14 +1,32 @@
-# Bayesian Histogram-based Anomaly Detection (BHAD)
+# *Bayesian Histogram-based Anomaly Detection (BHAD)* 🔥
 
 Python implementation of the BHAD algorithm as introduced in [Vosseler, A. (2022): Unsupervised Insurance Fraud Prediction Based on Anomaly Detector Ensembles](https://www.researchgate.net/publication/361463552_Unsupervised_Insurance_Fraud_Prediction_Based_on_Anomaly_Detector_Ensembles) and [Vosseler, A. (2023): BHAD: Explainable anomaly detection using Bayesian histograms](https://www.researchgate.net/publication/364265660_BHAD_Explainable_anomaly_detection_using_Bayesian_histograms). The package has been presented at *PyCon DE & PyData Berlin 2023* ([watch talk here](https://www.youtube.com/watch?v=_8zfgPTD-d8&list=PLGVZCDnMOq0peDguAzds7kVmBr8avp46K&index=8)) as well as at *42nd International Workshop on Bayesian Inference and Maximum Entropy Methods in Science and Engineering* ([MaxEnt 2023](https://www.mdpi.com/2673-9984/9/1/1)). The ***bhad* package** follows Scikit-learn's standard API for [outlier detection](https://scikit-learn.org/stable/modules/outlier_detection.html).
 
-## Installation
+## Package installation
 
+We opt here for using [*uv*](https://github.com/astral-sh/uv) as a package manager due to its speed and stability, but the same installation works using *pip* with *venv* for Python 3.12: 
 ```bash
-pip install bhad
+# curl -LsSf https://astral.sh/uv/install.sh | sh          # Optional: install uv for the first time
+uv venv env_bhad --python 3.12                             # create the usual virtual environment
+source env_bhad/bin/activate
 ```
 
-## Usage
+For local development (only):
+```bash
+uv pip install -r pyproject.toml --trusted-host pypi.org --trusted-host files.pythonhosted.org   
+
+# Install bhad in editable mode (incl. notebook dependencies)
+uv pip install -e ".[notebook]" --trusted-host pypi.org --trusted-host files.pythonhosted.org
+```
+
+Install directly from PyPi:
+```bash
+pip install bhad                                       
+# uv pip install bhad                                     # or via uv
+```
+
+
+## Model usage
 
 1.) Preprocess the input data: discretize continuous features and conduct Bayesian model selection (*optional*).
 
@@ -24,6 +42,8 @@ from sklearn.pipeline import Pipeline
 num_cols = [....]   # names of numeric features
 cat_cols = [....]   # categorical features
 
+# Setting nbins = None infers the Bayes-optimal number of bins 
+# using the MAP estimate
 pipe = Pipeline(steps=[
    ('discrete', Discretize(nbins = None)),   
    ('model', BHAD(contamination = 0.01, num_features = num_cols, cat_features = cat_cols))
