@@ -6,8 +6,8 @@ Python implementation of the *Bayesian Histogram-based Anomaly Detection (BHAD)*
 
 We opt here for using [*uv*](https://github.com/astral-sh/uv) as a package manager due to its speed and stability, but the same installation works using *pip* with *venv* for Python 3.12: 
 ```bash
-# curl -LsSf https://astral.sh/uv/install.sh | sh          # Optional: install uv for the first time
-uv venv .env_bhad --python 3.12                             # create the usual virtual environment
+# curl -LsSf https://astral.sh/uv/install.sh | sh       # Optional: install uv for the first time
+uv venv .env_bhad --python 3.12                         # create the usual virtual environment
 source .env_bhad/bin/activate
 ```
 
@@ -22,7 +22,7 @@ uv pip install -e ".[notebook]"
 Install directly from PyPi:
 ```bash
 pip install bhad                                       
-# uv pip install bhad                                     # or via uv
+# uv pip install bhad                                  # or via uv
 ```
 
 
