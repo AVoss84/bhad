@@ -3,7 +3,7 @@ name: Publish to Test PyPI
 on:
   push:
     tags:
-      - "0.2.1"  # Or "v*", "0.*", etc. to match your desired tag pattern
+      - "0.2.1"  # or "v*", "0.*", etc. depending on your tag pattern
 
 jobs:
   build-and-upload:
@@ -23,28 +23,23 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install build twine
 
-      # ------------------------
-      # (A) Optional: Install your package in dev mode + test dependencies
-      - name: Install package + test deps (dev mode)
+      # (A) Install your package in editable mode with the "notebook" extras (which includes pytest)
+      - name: Install package + 'notebook' extras
         run: |
-          # If you have a test extra in pyproject.toml like `[project.optional-dependencies].test = ["pytest", ...]`, do:
-          # python -m pip install -e ".[test]"
-          #
-          # Otherwise, just install pytest (and any other testing deps) directly:
-          python -m pip install -e .
-          python -m pip install pytest
+          python -m pip install -e ".[notebook]"
 
       # (B) Run your tests
       - name: Run tests
         run: |
           pytest --verbose
-      # ------------------------
 
+      # (C) Build the package
       - name: Build the package
         run: python -m build
 
+      # (D) Upload to Test PyPI (only if tests passed)
       - name: Upload to Test PyPI
-        if: success()  # Only runs if tests passed
+        if: success()
         run: |
           twine upload --repository testpypi dist/*
         env:
