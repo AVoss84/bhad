@@ -3,7 +3,7 @@ name: Publish to Test PyPI
 on:
   push:
     tags:
-      - "0.2.1"  # v0.2.0, v1.0.0, etc.
+      - "0.2.1"  # Or "v*", "0.*", etc. to match your desired tag pattern
 
 jobs:
   build-and-upload:
@@ -18,16 +18,33 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install dependencies
+      - name: Install build & twine
         run: |
-          python -m pip install --upgrade pip wheel
+          python -m pip install --upgrade pip
           python -m pip install build twine
 
-      - name: Build the package
+      # ------------------------
+      # (A) Optional: Install your package in dev mode + test dependencies
+      - name: Install package + test deps (dev mode)
         run: |
-          python -m build  
+          # If you have a test extra in pyproject.toml like `[project.optional-dependencies].test = ["pytest", ...]`, do:
+          # python -m pip install -e ".[test]"
+          #
+          # Otherwise, just install pytest (and any other testing deps) directly:
+          python -m pip install -e .
+          python -m pip install pytest
+
+      # (B) Run your tests
+      - name: Run tests
+        run: |
+          pytest --verbose
+      # ------------------------
+
+      - name: Build the package
+        run: python -m build
 
       - name: Upload to Test PyPI
+        if: success()  # Only runs if tests passed
         run: |
           twine upload --repository testpypi dist/*
         env:
