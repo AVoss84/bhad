@@ -19,8 +19,7 @@ uv pip install -e .
 
 Install directly from PyPi:
 ```bash
-pip install bhad                                       
-# uv pip install bhad                                  # or via uv
+uv pip install bhad                                       
 ```
 
 
