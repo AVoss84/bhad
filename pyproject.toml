@@ -5,9 +5,10 @@ requires = [
 ]
 build-backend = "setuptools.build_meta"
 
+# https://pypi.org/project/bhad
 [project]
 name = "bhad"
-version = "0.2.2.0"
+version = "0.2.3"
 description = "Bayesian Histogram-based Anomaly Detection"
 requires-python = ">=3.12"
 
@@ -49,3 +50,10 @@ package-dir = {"" = "src"}
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["bhad*"]
+
+
+[project.urls]
+homepage = "https://github.com/AVoss84/bhad"
+documentation = "https://github.com/AVoss84/bhad#readme"
+repository = "https://github.com/AVoss84/bhad"
+issues = "https://github.com/AVoss84/bhad/issues"
